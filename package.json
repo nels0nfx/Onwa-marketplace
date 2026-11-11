@@ -1,0 +1,20 @@
+{
+  "name": "onwa-marketplace",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ONWA Unified Marketplace - One marketplace. Endless possibilities.",
+  "workspaces": ["packages/*", "apps/*"],
+  "engines": { "node": ">=20.11" },
+  "scripts": {
+    "build:shared": "npm run build -w @onwa/shared",
+    "build": "npm run build:shared && npm run build -w @onwa/api && npm run build -w @onwa/web",
+    "dev:api": "npm run build:shared && npm run dev -w @onwa/api",
+    "dev:web": "npm run build:shared && npm run dev -w @onwa/web",
+    "typecheck": "npm run build:shared && npm run typecheck -w @onwa/api && npm run typecheck -w @onwa/web",
+    "test": "npm run build:shared && npm test -w @onwa/shared && npm test -w @onwa/api",
+    "test:shared": "npm run build:shared && npm test -w @onwa/shared",
+    "check:secrets": "node scripts/check-secrets.mjs",
+    "admin:bootstrap": "npm run bootstrap-admin -w @onwa/api --",
+    "release:zip": "bash scripts/make-release-zip.sh"
+  }
+}

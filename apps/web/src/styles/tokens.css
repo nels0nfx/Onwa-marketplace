@@ -1,0 +1,95 @@
+/* ONWA design tokens. Brand colours are fixed; everything else is derived per theme. */
+:root {
+  --obsidian: #111111;
+  --ivory: #f7f5f0;
+  --gold: #b58b45;
+  --white: #ffffff;
+
+  --font-display: var(--font-display-face, 'Iowan Old Style', Georgia, serif);
+  --font-body: var(--font-body-face, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif);
+
+  --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem; --space-4: 1rem;
+  --space-5: 1.5rem; --space-6: 2rem; --space-7: 3rem; --space-8: 4.5rem; --space-9: 7rem;
+
+  --radius-control: 3px;
+  --radius-card: 8px;
+  --radius-pill: 999px;
+
+  --container: 72rem;
+  --header-h: 3.75rem;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* Light theme (default) */
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: var(--ivory);
+  --surface: var(--white);
+  --surface-sunken: #efebe2;
+  --text: var(--obsidian);
+  --text-muted: #5b574f;
+  --line: rgba(17, 17, 17, 0.14);
+  --line-strong: rgba(17, 17, 17, 0.32);
+  --accent: var(--gold);
+  --accent-text: #7a5a22;
+  --btn-primary-bg: var(--obsidian);
+  --btn-primary-text: var(--ivory);
+  --btn-primary-hover: #2a2a2a;
+  --danger: #9e2a2a;
+  --danger-bg: #f8e9e6;
+  --success: #2c6a3d;
+  --success-bg: #e6f1e8;
+  --info: #5b4a22;
+  --info-bg: #f1ead9;
+  --shadow: 0 1px 2px rgba(17, 17, 17, 0.05), 0 8px 24px rgba(17, 17, 17, 0.06);
+}
+
+/* Dark theme */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: var(--obsidian);
+  --surface: #1a1a19;
+  --surface-sunken: #222220;
+  --text: var(--ivory);
+  --text-muted: #b6b1a5;
+  --line: rgba(247, 245, 240, 0.16);
+  --line-strong: rgba(247, 245, 240, 0.36);
+  --accent: var(--gold);
+  --accent-text: #d4b172;
+  --btn-primary-bg: var(--gold);
+  --btn-primary-text: var(--obsidian);
+  --btn-primary-hover: #c79c55;
+  --danger: #f0a0a0;
+  --danger-bg: #3a1f1f;
+  --success: #9ad3a6;
+  --success-bg: #1d3023;
+  --info: #e0c98f;
+  --info-bg: #302a1a;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+/* No-JS fallback: follow the operating system until the theme script runs. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --bg: var(--obsidian);
+    --surface: #1a1a19;
+    --surface-sunken: #222220;
+    --text: var(--ivory);
+    --text-muted: #b6b1a5;
+    --line: rgba(247, 245, 240, 0.16);
+    --line-strong: rgba(247, 245, 240, 0.36);
+    --accent-text: #d4b172;
+    --btn-primary-bg: var(--gold);
+    --btn-primary-text: var(--obsidian);
+    --btn-primary-hover: #c79c55;
+    --danger: #f0a0a0;
+    --danger-bg: #3a1f1f;
+    --success: #9ad3a6;
+    --success-bg: #1d3023;
+    --info: #e0c98f;
+    --info-bg: #302a1a;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+}

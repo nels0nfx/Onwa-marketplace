@@ -1,0 +1,15 @@
+# Security (v0.1.0)
+
+Implemented: deny-by-default RLS and grants; server-side permission checks on every admin route and SQL-level re-checks on role changes; role escalation guards (no self-change, super_admin only by super_admin, last super_admin protected, customer base role protected); sign-up cannot request roles via metadata; append-only audit log; zod validation with strict schemas; PostgREST filter sanitising; open-redirect protection; helmet, CORS allow-list, 100kb body limit, rate limits (global and per-admin-user writes); log redaction; no-enumeration login/reset messages; security headers on the web app; secret scanner in CI and in the release script.
+
+Known gaps / required before production:
+- Rate limiting is in-memory (single API instance). Use a shared store before scaling out.
+- No strict Content-Security-Policy yet (needs nonce work); add in a later stage.
+- Supabase Auth abuse protection (CAPTCHA, per-IP limits) must be configured in the Supabase dashboard.
+- No MFA for staff yet; strongly recommended before staff accounts handle finance (Stage 5+).
+- Backups: enable Supabase PITR/daily backups on the production project and test a restore. Document the drill in this file once done.
+- Incident response and key-rotation runbooks are not yet written.
+
+Secrets: the service-role key exists only in the API environment. Rotate it immediately if ever exposed. `npm run check:secrets` must pass before every release.
+
+No security certification or audit is claimed.
