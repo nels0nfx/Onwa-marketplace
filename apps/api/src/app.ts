@@ -41,7 +41,7 @@ export function createApp(deps: AppDeps, config: AppConfig): Express {
         if (!origin || config.CORS_ORIGINS.includes(origin)) return cb(null, true);
         cb(null, false);
       },
-      methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
       allowedHeaders: ['Authorization', 'Content-Type'],
       maxAge: 600,
     }),

@@ -10,7 +10,7 @@ export class ApiError extends Error {
 /** Server-to-server call to the ONWA API. The Supabase access token is forwarded; the API re-verifies it. */
 export async function apiRequest<T>(
   path: string,
-  options: { token: string; method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'; body?: unknown },
+  options: { token: string; method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; body?: unknown },
 ): Promise<T> {
   const base = process.env.API_BASE_URL;
   if (!base) throw new ApiError(500, 'misconfigured', 'API_BASE_URL is not set');
