@@ -54,9 +54,16 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       <div className="page-head">
         <h1>Administration</h1>
         <div className="row">{me.roles.map((r) => <Badge key={r} staff={ROLE_DEFINITIONS[r].isStaff}>{ROLE_DEFINITIONS[r].name}</Badge>)}</div>
-        <p className="muted">Modules for sellers, catalogue, orders and finance are added in later releases. This release covers accounts, roles and the audit log.</p>
+        <p className="muted">Modules for sellers, catalogue, orders and finance are added in later releases. This release covers accounts, roles, seller applications and the audit log.</p>
       </div>
       {message ? <Alert tone={message.tone}>{message.text}</Alert> : null}
+      {can('sellers.read') ? (
+        <section className="card stack" aria-labelledby="sellers-card-title">
+          <h2 id="sellers-card-title">Sellers</h2>
+          <p className="muted">Review seller applications and manage approved sellers.</p>
+          <div><Link className="btn btn-secondary" href="/admin/sellers">Open seller applications</Link></div>
+        </section>
+      ) : null}
       {loadFailed ? <Alert tone="error">Some data could not be loaded. Try again.</Alert> : null}
 
       {users ? (
@@ -119,7 +126,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         </section>
       ) : null}
 
-      {!users && !audit && !loadFailed ? <p className="muted">Your role does not include any modules available in this release.</p> : null}
+      {!users && !audit && !can('sellers.read') && !loadFailed ? <p className="muted">Your role does not include any modules available in this release.</p> : null}
     </div>
   );
 }

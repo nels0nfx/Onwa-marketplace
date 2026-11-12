@@ -51,6 +51,14 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         </form>
       </section>
 
+      <section className="card stack" aria-labelledby="more-title">
+        <h2 id="more-title">Your ONWA</h2>
+        <div className="row">
+          <ButtonLink href="/account/addresses" variant="secondary">Delivery addresses</ButtonLink>
+          {me.roles.includes('seller') ? <ButtonLink href="/seller" variant="secondary">Seller dashboard</ButtonLink> : <ButtonLink href="/sell" variant="secondary">Become a seller</ButtonLink>}
+        </div>
+      </section>
+
       <section className="card stack" aria-labelledby="access-title">
         <h2 id="access-title">Access</h2>
         <div className="row">

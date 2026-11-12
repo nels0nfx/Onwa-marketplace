@@ -2,9 +2,20 @@
 
 **One marketplace. Endless possibilities.**
 
-ONWA is a Nigerian multi-vendor marketplace for physical products, digital downloads and services (default currency NGN). This repository is built in stages. **This is release v0.1.0, Stage 1: Foundation.**
+ONWA is a Nigerian multi-vendor marketplace for physical products, digital downloads and services (default currency NGN). This repository is built in stages. **This is release v0.2.0, Stage 2: Customers and sellers** (builds on Stage 1: Foundation).
 
-## What v0.1.0 contains
+## What v0.2.0 adds (Stage 2)
+
+- **Delivery addresses** for customers (Nigerian states, up to 10, default address handling).
+- **Seller applications**: draft, document upload to a private bucket, submit, review by staff (start review, request more information, approve, reject), full status history.
+- **Approval** atomically creates the seller, the public storefront and the `seller` role. It does not approve any listing.
+- **Storefronts** at `/store/<slug>`, a stores directory at `/stores`, follow/unfollow, logo and cover upload, controlled customisation (fixed accent colours, plain-text fields only).
+- **Seller dashboard** (`/seller`) for store details and media; **admin** pages for applications and seller suspension.
+- Migrations `0008` to `0010`, SQL tests `002_sellers_addresses.sql`.
+
+Not yet: products, services, cart, orders, payments, delivery, messaging, reviews, notifications (later stages).
+
+## What v0.1.0 contained
 
 - Monorepo: `apps/web` (Next.js 15, TypeScript), `apps/api` (Node.js/Express modular monolith, `/api/v1`), `packages/shared` (roles, permissions, validation), `supabase/` (migrations and SQL tests).
 - Supabase Auth: register, email confirmation, sign in, sign out, forgot/reset password.
@@ -29,8 +40,9 @@ docs/             Architecture, database, security, deployment, Termux, testing,
 
 ## Setup
 
+0. **Upgrading from v0.1.0:** apply only the new migrations `0008`, `0009`, `0010` in the Supabase SQL Editor, in order. No new environment variables are required (optional: `RATE_LIMIT_USER_WRITES_PER_MIN`).
 1. **Supabase project**: create one at supabase.com. In *Authentication > Providers > Email* turn on email confirmation and set minimum password length 10. In *URL Configuration* set Site URL to your website URL and add `<site>/auth/callback` to Redirect URLs.
-2. **Database**: apply `supabase/migrations/0001..0007` in order (Supabase CLI `supabase db push`, or paste each file into the SQL Editor in order).
+2. **Database**: apply `supabase/migrations/0001..0010` in order (Supabase CLI `supabase db push`, or paste each file into the SQL Editor in order).
 3. **Environment**: see `.env.example`. API needs `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CORS_ORIGINS`. Web needs `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL`, `API_BASE_URL`.
 4. **Install and run** (on a computer or CI; see Termux notes):
    ```

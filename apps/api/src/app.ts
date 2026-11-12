@@ -7,11 +7,15 @@ import { authenticate } from './middleware/authenticate.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { createRateLimiters } from './middleware/rateLimit.js';
 import { requestId } from './middleware/requestId.js';
+import { addressRoutes } from './modules/addresses/routes.js';
 import { adminRoutes } from './modules/admin/routes.js';
 import { healthRoutes } from './modules/health/routes.js';
+import { sellerAdminRoutes } from './modules/sellers/adminRoutes.js';
+import { sellerRoutes } from './modules/sellers/routes.js';
+import { publicStoreRoutes } from './modules/stores/publicRoutes.js';
 import { meRoutes } from './modules/users/routes.js';
 
-export type AppConfig = Pick<Env, 'CORS_ORIGINS' | 'TRUST_PROXY_HOPS' | 'RATE_LIMIT_GLOBAL_PER_15_MIN' | 'RATE_LIMIT_ADMIN_WRITES_PER_MIN'>;
+export type AppConfig = Pick<Env, 'CORS_ORIGINS' | 'TRUST_PROXY_HOPS' | 'RATE_LIMIT_GLOBAL_PER_15_MIN' | 'RATE_LIMIT_ADMIN_WRITES_PER_MIN' | 'RATE_LIMIT_USER_WRITES_PER_MIN'>;
 
 /** Builds the Express app. All I/O comes in through `deps`, so tests can inject fakes. */
 export function createApp(deps: AppDeps, config: AppConfig): Express {
@@ -22,7 +26,13 @@ export function createApp(deps: AppDeps, config: AppConfig): Express {
   const limits = createRateLimiters(config);
 
   app.use(requestId);
-  app.use((req, res, next) => { const start = Date.now(); res.on('finish', () => { if (req.path !== '/api/v1/health') deps.logger.info('request', { method: req.method, path: req.path, status: res.statusCode, ms: Date.now() - start }); }); next(); });
+  app.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+      if (req.path !== '/api/v1/health') deps.logger.info('request', { method: req.method, path: req.path, status: res.statusCode, ms: Date.now() - start });
+    });
+    next();
+  });
   app.use(helmet());
   app.use(
     cors({
@@ -41,9 +51,13 @@ export function createApp(deps: AppDeps, config: AppConfig): Express {
 
   const v1 = express.Router();
   v1.use(healthRoutes());
+  v1.use(publicStoreRoutes(deps));
   v1.use(authenticate(deps));
   v1.use(meRoutes(deps));
+  v1.use(addressRoutes(deps, limits));
+  v1.use(sellerRoutes(deps, limits));
   v1.use(adminRoutes(deps, limits));
+  v1.use(sellerAdminRoutes(deps, limits));
   app.use('/api/v1', v1);
 
   app.use(notFoundHandler);

@@ -36,3 +36,18 @@ export async function apiRequest<T>(
   if (!res.ok) throw new ApiError(res.status, payload?.error?.code ?? 'error', payload?.error?.message ?? 'Request failed');
   return payload as T;
 }
+
+/** Unauthenticated read of a public API endpoint (storefronts). Returns null on 404. */
+export async function apiPublic<T>(path: string): Promise<T | null> {
+  const base = process.env.API_BASE_URL;
+  if (!base) throw new ApiError(500, 'misconfigured', 'API_BASE_URL is not set');
+  let res: Response;
+  try {
+    res = await fetch(`${base.replace(/\/+$/, '')}/api/v1${path}`, { cache: 'no-store', signal: AbortSignal.timeout(25000) });
+  } catch {
+    throw new ApiError(503, 'unreachable', 'The ONWA API could not be reached');
+  }
+  if (res.status === 404) return null;
+  if (!res.ok) throw new ApiError(res.status, 'error', 'Request failed');
+  return (await res.json()) as T;
+}

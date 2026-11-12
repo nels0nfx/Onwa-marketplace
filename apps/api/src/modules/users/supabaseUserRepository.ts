@@ -4,7 +4,7 @@ import {
   type AdminUserRow, type AuditLogRow, type Paged, type PermissionCode, type Profile, type RoleCode, type RoleSummary,
 } from '@onwa/shared';
 import type { TokenVerifier, UserAccess, UserRepository, VerifiedUser } from '../../deps.js';
-import { AppError, conflict, forbidden, notFound } from '../../lib/errors.js';
+import { mapDbError } from '../../lib/dbErrors.js';
 
 const PROFILE_COLUMNS = 'id,email,full_name,phone,avatar_url,status,created_at';
 
@@ -21,17 +21,6 @@ interface ProfileRow {
 const toProfile = (r: ProfileRow): Profile => ({
   id: r.id, email: r.email, fullName: r.full_name, phone: r.phone, avatarUrl: r.avatar_url, status: r.status, createdAt: r.created_at,
 });
-
-/** Maps PostgreSQL error codes raised by our SQL functions to API errors. */
-function mapDbError(error: { code?: string; message: string }): AppError {
-  switch (error.code) {
-    case '42501': return forbidden(error.message);
-    case 'P0002': return notFound(error.message);
-    case '23514': return conflict(error.message);
-    case '22023': return new AppError(400, 'bad_request', error.message);
-    default: { console.error(JSON.stringify({ level: 'error', msg: 'db_error', code: error.code, message: error.message })); return new AppError(500, 'internal_error', 'Database error'); }
-  }
-}
 
 export class SupabaseTokenVerifier implements TokenVerifier {
   constructor(private readonly client: SupabaseClient) {}

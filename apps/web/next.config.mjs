@@ -11,6 +11,7 @@ const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   transpilePackages: ['@onwa/shared'],
+  experimental: { serverActions: { bodySizeLimit: '6mb' } },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },

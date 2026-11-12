@@ -8,9 +8,10 @@ const body = (message: string) => ({ error: { code: 'rate_limited', message } })
  * In-memory limiter: correct for a single API instance. Before running more than one
  * instance, back this with a shared store (e.g. Redis) - see docs/SECURITY.md.
  */
-export function createRateLimiters(env: Pick<Env, 'RATE_LIMIT_GLOBAL_PER_15_MIN' | 'RATE_LIMIT_ADMIN_WRITES_PER_MIN'>): {
+export function createRateLimiters(env: Pick<Env, 'RATE_LIMIT_GLOBAL_PER_15_MIN' | 'RATE_LIMIT_ADMIN_WRITES_PER_MIN' | 'RATE_LIMIT_USER_WRITES_PER_MIN'>): {
   global: RequestHandler;
   adminWrites: RequestHandler;
+  userWrites: RequestHandler;
 } {
   return {
     global: rateLimit({
@@ -27,6 +28,14 @@ export function createRateLimiters(env: Pick<Env, 'RATE_LIMIT_GLOBAL_PER_15_MIN'
       legacyHeaders: false,
       keyGenerator: (req) => req.auth?.userId ?? 'anonymous',
       message: body('Too many administrative changes. Wait a minute and try again.'),
+    }),
+    userWrites: rateLimit({
+      windowMs: 60 * 1000,
+      limit: env.RATE_LIMIT_USER_WRITES_PER_MIN,
+      standardHeaders: 'draft-7',
+      legacyHeaders: false,
+      keyGenerator: (req) => req.auth?.userId ?? 'anonymous',
+      message: body('Too many changes in a short time. Wait a minute and try again.'),
     }),
   };
 }

@@ -1,8 +1,8 @@
-import type { CookieOptions } from '@supabase/ssr';
-type CookieToSet = { name: string; value: string; options?: CookieOptions };
-import { createServerClient } from '@supabase/ssr';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { supabasePublicConfig } from '@/lib/env';
+
+type CookieToSet = { name: string; value: string; options?: CookieOptions };
 
 /** Server-side Supabase client bound to the visitor's session cookies. Uses the public anon key only. */
 export async function createSupabaseServerClient() {

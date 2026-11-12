@@ -44,4 +44,6 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f supabase/tests/shim/local_auth_shim.sql
           for f in supabase/migrations/*.sql; do echo "== $f"; psql -v ON_ERROR_STOP=1 -f "$f"; done
       - name: Run SQL tests
-        run: psql -v ON_ERROR_STOP=1 -f supabase/tests/001_rbac_rls.sql
+        run: |
+          psql -v ON_ERROR_STOP=1 -f supabase/tests/001_rbac_rls.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/tests/002_sellers_addresses.sql

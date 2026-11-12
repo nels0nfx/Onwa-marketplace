@@ -26,6 +26,12 @@ export async function SiteHeader() {
           )}
         </nav>
       </div>
+      <nav className="subnav" aria-label="Marketplace">
+        <div className="container subnav-inner">
+          <Link href="/stores">Stores</Link>
+          <Link href="/sell">Become a seller</Link>
+        </div>
+      </nav>
     </header>
   );
 }

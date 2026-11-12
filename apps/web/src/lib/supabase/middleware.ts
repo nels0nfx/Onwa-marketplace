@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { supabasePublicConfig } from '@/lib/env';
 
 type CookieToSet = { name: string; value: string; options?: CookieOptions };
-const PROTECTED_PREFIXES = ['/account', '/admin', '/reset-password'];
+const PROTECTED_PREFIXES = ['/account', '/admin', '/reset-password', '/seller', '/sell/apply'];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });

@@ -13,6 +13,7 @@ const schema = z
     TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
     RATE_LIMIT_GLOBAL_PER_15_MIN: z.coerce.number().int().positive().default(300),
     RATE_LIMIT_ADMIN_WRITES_PER_MIN: z.coerce.number().int().positive().default(20),
+    RATE_LIMIT_USER_WRITES_PER_MIN: z.coerce.number().int().positive().default(60),
     LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   })
   .superRefine((env, ctx) => {

@@ -32,3 +32,20 @@ API modules in v0.1.0: `health`, `users` (`/me`), `admin` (users, roles, audit l
 | DELETE `/admin/users/:id/roles/:role` | token | `roles.assign` |
 
 Errors: `{ "error": { "code", "message", "requestId", "details?" } }`.
+
+## Stage 2 endpoints (`/api/v1`)
+
+| Method & path | Auth | Permission / rule |
+|---|---|---|
+| GET/POST `/me/addresses`, PUT/DELETE `/me/addresses/:id` | token | own addresses only |
+| GET/PUT `/seller/application` | token | own application; PUT only while draft or more_info_required; sellers cannot re-apply |
+| POST `/seller/application/submit` | token | checks completeness in SQL |
+| POST/DELETE `/seller/application/documents` | token | file path must be `<userId>/<applicationId>/<uuid>.ext` and exist in storage |
+| GET/PUT `/seller/store`, POST `/seller/store/media` | token | seller only; suspended sellers read-only |
+| GET `/stores`, GET `/stores/:slug` | none | active sellers only; public fields only |
+| POST/DELETE `/stores/:slug/follow`, GET `/me/follows` | token | own follows |
+| GET `/admin/seller-applications[/:id]` | token | `sellers.read` (detail includes short-lived signed document URLs) |
+| POST `/admin/seller-applications/:id/decision` | token | `sellers.review`; `start_review`, `request_info`, `approve`, `reject`; notes required for the last two |
+| GET `/admin/sellers`, POST `/admin/sellers/:id/status` | token | `sellers.read` / `sellers.manage` |
+
+Uploads: the website validates size and real file type (magic bytes), uploads to Supabase Storage with the user's own session (storage RLS limits them to their own folder), then asks the API to record the file. The API re-checks the path and that the object exists.

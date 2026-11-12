@@ -2,7 +2,7 @@
 
 Use separate Supabase projects (and env values) for staging and production.
 
-**Database**: apply migrations 0001-0007 to each project.
+**Database**: apply migrations 0001-0010 to each project. Migration 0010 creates the `seller-documents` (private) and `store-media` (public) storage buckets; confirm both exist under Storage afterwards.
 
 **API on Render**: use `render.yaml` (Blueprint) or create a Node web service: build `npm install && npm run build:shared && npm run build -w @onwa/api`, start `npm run start -w @onwa/api`, health check `/api/v1/health`. Set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CORS_ORIGINS=https://your-site`, `TRUST_PROXY_HOPS=1`, `NODE_ENV=production`.
 
