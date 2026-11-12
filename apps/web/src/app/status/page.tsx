@@ -7,7 +7,7 @@ async function probe(url: string, init?: RequestInit) {
   const t = Date.now();
   try {
     const res = await fetch(url, { ...init, cache: 'no-store', signal: AbortSignal.timeout(20000) });
-    return `HTTP ${res.status} in ${Date.now() - t}ms`;
+    const body = res.ok ? "" : " " + (await res.text()).slice(0, 200); return `HTTP ${res.status} in ${Date.now() - t}ms${body}`;
   } catch (e) {
     return `FAILED after ${Date.now() - t}ms (${e instanceof Error ? e.name : 'error'})`;
   }
