@@ -15,7 +15,7 @@ export const metadata: Metadata = { title: 'Your account' };
 
 export default async function AccountPage({ searchParams }: { searchParams: Promise<{ e?: string; f?: string; m?: string }> }) {
   const { token } = await requireSession('/account');
-  const { me, apiDown } = await loadMe(token);
+  const { me, apiDown, status } = await loadMe(token);
   const sp = await searchParams;
   const message = resolveMessage(sp.e ?? sp.m, sp.f);
 
