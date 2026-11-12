@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import { ROLE_DEFINITIONS } from '@onwa/shared';
 import { Alert } from '@/components/ui/Alert';
 import { Badge } from '@/components/ui/Badge';
@@ -19,15 +18,18 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
   const sp = await searchParams;
   const message = resolveMessage(sp.e ?? sp.m, sp.f);
 
-  if (apiDown) {
+  if (!me) {
     return (
       <div className="container page-medium stack">
         <h1>Your account</h1>
-        <Alert tone="error">We could not load your account right now. Try again in a moment.</Alert>
+        <Alert tone="error">
+          {apiDown
+            ? `We could not load your account (API status ${status}). Try again in a moment.`
+            : `The ONWA API did not accept your session (status ${status}). Sign out, then sign in again.`}
+        </Alert>
       </div>
     );
   }
-  if (!me) redirect('/login?e=callback_failed');
 
   const canAdmin = me.permissions.includes('admin.access');
   return (

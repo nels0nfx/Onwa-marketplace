@@ -29,7 +29,7 @@ function mapDbError(error: { code?: string; message: string }): AppError {
     case 'P0002': return notFound(error.message);
     case '23514': return conflict(error.message);
     case '22023': return new AppError(400, 'bad_request', error.message);
-    default: return new AppError(500, 'internal_error', 'Database error');
+    default: { console.error(JSON.stringify({ level: 'error', msg: 'db_error', code: error.code, message: error.message })); return new AppError(500, 'internal_error', 'Database error'); }
   }
 }
 
