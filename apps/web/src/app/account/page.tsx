@@ -11,6 +11,7 @@ import { loadMe, requireSession } from '@/lib/session';
 import { updateProfileAction } from './actions';
 
 export const metadata: Metadata = { title: 'Your account' };
+export const maxDuration = 45;
 
 export default async function AccountPage({ searchParams }: { searchParams: Promise<{ e?: string; f?: string; m?: string }> }) {
   const { token } = await requireSession('/account');

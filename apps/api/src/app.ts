@@ -22,6 +22,7 @@ export function createApp(deps: AppDeps, config: AppConfig): Express {
   const limits = createRateLimiters(config);
 
   app.use(requestId);
+  app.use((req, res, next) => { const start = Date.now(); res.on('finish', () => { if (req.path !== '/api/v1/health') deps.logger.info('request', { method: req.method, path: req.path, status: res.statusCode, ms: Date.now() - start }); }); next(); });
   app.use(helmet());
   app.use(
     cors({

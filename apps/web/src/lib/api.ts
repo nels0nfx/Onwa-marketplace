@@ -25,6 +25,7 @@ export async function apiRequest<T>(
       },
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
       cache: 'no-store',
+      signal: AbortSignal.timeout(25000),
     });
   } catch {
     throw new ApiError(503, 'unreachable', 'The ONWA API could not be reached');
