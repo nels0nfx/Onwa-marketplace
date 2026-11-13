@@ -2,9 +2,20 @@
 
 **One marketplace. Endless possibilities.**
 
-ONWA is a Nigerian multi-vendor marketplace for physical products, digital downloads and services (default currency NGN). This repository is built in stages. **This is release v0.2.0, Stage 2: Customers and sellers** (builds on Stage 1: Foundation).
+ONWA is a Nigerian multi-vendor marketplace for physical products, digital downloads and services (default currency NGN). This repository is built in stages. **This is release v0.3.0, Stage 3: Catalogue and inventory** (builds on Stage 2: Customers and sellers, and Stage 1: Foundation).
 
-## What v0.2.0 adds (Stage 2)
+## What v0.3.0 adds (Stage 3)
+
+- **Categories** (two levels, starter set seeded, staff can add/rename/hide) managed at `/admin/categories`.
+- **Physical products** with variants (up to 3 options, 100 variants), prices in integer kobo, sale prices, SKUs, attributes, weight and dimensions, up to 8 images (public `product-media` bucket).
+- **Inventory**: stock changes only through database functions. Every change is an immutable `inventory_movements` row and stock can never go below zero, so it cannot oversell. Sellers can restock/correct; sales are reserved for the platform (Stage 4).
+- **Listing review**: draft, awaiting review, changes requested, live, rejected, archived. A live listing whose content or images change returns to review. Staff with `catalog.moderate` decide at `/admin/products`.
+- **Seller product management** at `/seller/products`; **public browsing** at `/products` (search, category, condition, price, in-stock, sort) and `/product/<slug>`; products also appear on storefronts.
+- Migrations `0011`, `0012`; SQL tests `003_catalog.sql`.
+
+Not yet: cart, checkout, orders, payments (Stage 4+), digital products and services (Stages 6-7), per-category attribute definitions, a configurable "listing approval required" switch (Stage 9; approval is always required for now).
+
+## What v0.2.0 added (Stage 2)
 
 - **Delivery addresses** for customers (Nigerian states, up to 10, default address handling).
 - **Seller applications**: draft, document upload to a private bucket, submit, review by staff (start review, request more information, approve, reject), full status history.
@@ -40,9 +51,10 @@ docs/             Architecture, database, security, deployment, Termux, testing,
 
 ## Setup
 
-0. **Upgrading from v0.1.0:** apply only the new migrations `0008`, `0009`, `0010` in the Supabase SQL Editor, in order. No new environment variables are required (optional: `RATE_LIMIT_USER_WRITES_PER_MIN`).
+0. **Upgrading from v0.2.0:** apply only the new migrations `0011` and `0012` in the Supabase SQL Editor, in order. No new environment variables.
+0. **Upgrading from v0.1.0:** apply `0008` to `0012` in order. Optional env: `RATE_LIMIT_USER_WRITES_PER_MIN`.
 1. **Supabase project**: create one at supabase.com. In *Authentication > Providers > Email* turn on email confirmation and set minimum password length 10. In *URL Configuration* set Site URL to your website URL and add `<site>/auth/callback` to Redirect URLs.
-2. **Database**: apply `supabase/migrations/0001..0010` in order (Supabase CLI `supabase db push`, or paste each file into the SQL Editor in order).
+2. **Database**: apply `supabase/migrations/0001..0012` in order (Supabase CLI `supabase db push`, or paste each file into the SQL Editor in order).
 3. **Environment**: see `.env.example`. API needs `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CORS_ORIGINS`. Web needs `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL`, `API_BASE_URL`.
 4. **Install and run** (on a computer or CI; see Termux notes):
    ```

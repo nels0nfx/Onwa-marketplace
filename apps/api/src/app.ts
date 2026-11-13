@@ -9,6 +9,7 @@ import { createRateLimiters } from './middleware/rateLimit.js';
 import { requestId } from './middleware/requestId.js';
 import { addressRoutes } from './modules/addresses/routes.js';
 import { adminRoutes } from './modules/admin/routes.js';
+import { adminCatalogRoutes, publicCatalogRoutes, sellerCatalogRoutes } from './modules/catalog/routes.js';
 import { healthRoutes } from './modules/health/routes.js';
 import { sellerAdminRoutes } from './modules/sellers/adminRoutes.js';
 import { sellerRoutes } from './modules/sellers/routes.js';
@@ -52,12 +53,15 @@ export function createApp(deps: AppDeps, config: AppConfig): Express {
   const v1 = express.Router();
   v1.use(healthRoutes());
   v1.use(publicStoreRoutes(deps));
+  v1.use(publicCatalogRoutes(deps));
   v1.use(authenticate(deps));
   v1.use(meRoutes(deps));
   v1.use(addressRoutes(deps, limits));
   v1.use(sellerRoutes(deps, limits));
   v1.use(adminRoutes(deps, limits));
   v1.use(sellerAdminRoutes(deps, limits));
+  v1.use(sellerCatalogRoutes(deps, limits));
+  v1.use(adminCatalogRoutes(deps, limits));
   app.use('/api/v1', v1);
 
   app.use(notFoundHandler);

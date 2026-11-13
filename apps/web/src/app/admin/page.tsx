@@ -54,7 +54,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       <div className="page-head">
         <h1>Administration</h1>
         <div className="row">{me.roles.map((r) => <Badge key={r} staff={ROLE_DEFINITIONS[r].isStaff}>{ROLE_DEFINITIONS[r].name}</Badge>)}</div>
-        <p className="muted">Modules for sellers, catalogue, orders and finance are added in later releases. This release covers accounts, roles, seller applications and the audit log.</p>
+        <p className="muted">Modules for sellers, catalogue, orders and finance are added in later releases. This release covers accounts, roles, seller applications, product moderation, categories and the audit log.</p>
       </div>
       {message ? <Alert tone={message.tone}>{message.text}</Alert> : null}
       {can('sellers.read') ? (
@@ -62,6 +62,20 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           <h2 id="sellers-card-title">Sellers</h2>
           <p className="muted">Review seller applications and manage approved sellers.</p>
           <div><Link className="btn btn-secondary" href="/admin/sellers">Open seller applications</Link></div>
+        </section>
+      ) : null}
+      {can('catalog.moderate') ? (
+        <section className="card stack" aria-labelledby="products-card-title">
+          <h2 id="products-card-title">Product listings</h2>
+          <p className="muted">Review listings submitted by sellers before they go live.</p>
+          <div><Link className="btn btn-secondary" href="/admin/products">Open moderation queue</Link></div>
+        </section>
+      ) : null}
+      {can('categories.manage') ? (
+        <section className="card stack" aria-labelledby="cats-card-title">
+          <h2 id="cats-card-title">Categories</h2>
+          <p className="muted">Create, rename, reorder or hide product categories.</p>
+          <div><Link className="btn btn-secondary" href="/admin/categories">Manage categories</Link></div>
         </section>
       ) : null}
       {loadFailed ? <Alert tone="error">Some data could not be loaded. Try again.</Alert> : null}
@@ -126,7 +140,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         </section>
       ) : null}
 
-      {!users && !audit && !can('sellers.read') && !loadFailed ? <p className="muted">Your role does not include any modules available in this release.</p> : null}
+      {!users && !audit && !can('sellers.read') && !can('catalog.moderate') && !can('categories.manage') && !loadFailed ? <p className="muted">Your role does not include any modules available in this release.</p> : null}
     </div>
   );
 }

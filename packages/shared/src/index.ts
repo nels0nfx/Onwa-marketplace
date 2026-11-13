@@ -6,3 +6,4 @@ export * from './types.js';
 export * from './nigeria.js';
 export * from './seller.js';
 export * from './files.js';
+export * from './catalog.js';

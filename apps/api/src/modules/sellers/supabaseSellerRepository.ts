@@ -110,7 +110,7 @@ export class SupabaseSellerRepository implements SellerRepository {
     await this.db.storage.from(DOC_BUCKET).remove([row.storage_path]);
   }
 
-  async objectExists(bucket: 'seller-documents' | 'store-media', path: string): Promise<boolean> {
+  async objectExists(bucket: 'seller-documents' | 'store-media' | 'product-media', path: string): Promise<boolean> {
     const slash = path.lastIndexOf('/');
     const dir = path.slice(0, slash);
     const file = path.slice(slash + 1);

@@ -158,3 +158,23 @@ legend { font-family: var(--font-display); font-size: 1.25rem; padding-inline: v
 .prose { white-space: pre-line; overflow-wrap: anywhere; }
 .preview-img { max-width: 12rem; max-height: 6rem; border-radius: var(--radius-control); border: 1px solid var(--line); object-fit: cover; }
 .inline-form { display: inline; }
+
+/* ---------- Stage 3: catalogue ---------- */
+.product-grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(2, 1fr); }
+@media (min-width: 40rem) { .product-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 64rem) { .product-grid { grid-template-columns: repeat(4, 1fr); } }
+.product-card { display: grid; gap: var(--space-3); color: var(--text); text-decoration: none; align-content: start; }
+.product-card:hover strong { text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 0.2em; }
+.product-img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: var(--radius-card); background: var(--surface-sunken); border: 1px solid var(--line); display: block; }
+.product-img-empty { display: grid; place-items: center; font-family: var(--font-display); font-size: 3rem; color: var(--text-muted); }
+.price { font-weight: 700; }
+.price s { color: var(--text-muted); font-weight: 400; margin-left: var(--space-2); }
+.filters { display: grid; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); }
+@media (min-width: 48rem) { .filters { grid-template-columns: repeat(4, 1fr); align-items: end; } }
+.gallery { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr)); }
+.gallery .product-img:first-child { grid-column: 1 / -1; max-height: 28rem; }
+.product-layout { display: grid; gap: var(--space-6); }
+@media (min-width: 56rem) { .product-layout { grid-template-columns: 1.1fr 1fr; align-items: start; } }
+.variant-row { display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: space-between; padding-block: var(--space-3); border-bottom: 1px solid var(--line); }
+.crumbs { font-size: 0.85rem; color: var(--text-muted); }
+.checklist { margin: 0; padding-left: var(--space-5); display: grid; gap: var(--space-1); }

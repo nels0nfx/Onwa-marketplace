@@ -53,6 +53,7 @@ export interface ApiErrorBody {
 }
 
 // ---------------------------------------------------------------- Stage 2
+import type { ProductCondition, ProductStatus } from './catalog.js';
 import type { ApplicationStatus, DocumentKind, SellerStatus, StoreAccent } from './seller.js';
 
 export interface Address {
@@ -171,4 +172,143 @@ export interface PublicStore extends PublicStoreCard {
   verified: true;
   followers: number;
   since: string;
+}
+
+// ---------------------------------------------------------------- Stage 3
+export interface Category {
+  id: string;
+  parentId: string | null;
+  slug: string;
+  name: string;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+export interface CategoryNode extends Category {
+  children: Category[];
+}
+
+export interface ProductImage {
+  id: string;
+  url: string;
+  altText: string | null;
+  position: number;
+}
+
+export interface SellerVariant {
+  id: string;
+  sku: string | null;
+  optionValues: Record<string, string>;
+  priceKobo: number;
+  salePriceKobo: number | null;
+  stockQuantity: number;
+  isActive: boolean;
+}
+
+export interface SellerProduct {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  brand: string | null;
+  condition: ProductCondition;
+  status: ProductStatus;
+  reviewNote: string | null;
+  categoryId: string | null;
+  categoryName: string | null;
+  weightGrams: number | null;
+  lengthCm: number | null;
+  widthCm: number | null;
+  heightCm: number | null;
+  shippingRequirements: string | null;
+  options: { name: string; values: string[] }[];
+  attributes: Record<string, string>;
+  priceFromKobo: number | null;
+  totalStock: number;
+  images: ProductImage[];
+  variants: SellerVariant[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SellerProductRow {
+  id: string;
+  slug: string;
+  name: string;
+  status: ProductStatus;
+  priceFromKobo: number | null;
+  totalStock: number;
+  imageUrl: string | null;
+  updatedAt: string;
+}
+
+export interface StockMovement {
+  id: string;
+  variantId: string;
+  delta: number;
+  reason: string;
+  quantityAfter: number;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface PublicProductCard {
+  slug: string;
+  name: string;
+  brand: string | null;
+  priceFromKobo: number | null;
+  hasSale: boolean;
+  inStock: boolean;
+  imageUrl: string | null;
+  storeName: string;
+  storeSlug: string;
+}
+
+export interface PublicVariant {
+  id: string;
+  optionValues: Record<string, string>;
+  priceKobo: number;
+  salePriceKobo: number | null;
+  inStock: boolean;
+  lowStock: boolean;
+}
+
+export interface PublicProduct {
+  slug: string;
+  name: string;
+  description: string | null;
+  brand: string | null;
+  condition: ProductCondition;
+  category: { slug: string; name: string } | null;
+  options: { name: string; values: string[] }[];
+  attributes: Record<string, string>;
+  weightGrams: number | null;
+  shippingRequirements: string | null;
+  images: ProductImage[];
+  variants: PublicVariant[];
+  store: { slug: string; name: string; accent: string };
+}
+
+export interface AdminProductRow {
+  id: string;
+  slug: string;
+  name: string;
+  status: ProductStatus;
+  storeName: string;
+  submittedAt: string | null;
+  updatedAt: string;
+}
+
+export interface ProductEvent {
+  id: string;
+  fromStatus: string | null;
+  toStatus: string;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface AdminProductDetail extends SellerProduct {
+  storeName: string;
+  storeSlug: string;
+  events: ProductEvent[];
 }

@@ -49,3 +49,17 @@ Errors: `{ "error": { "code", "message", "requestId", "details?" } }`.
 | GET `/admin/sellers`, POST `/admin/sellers/:id/status` | token | `sellers.read` / `sellers.manage` |
 
 Uploads: the website validates size and real file type (magic bytes), uploads to Supabase Storage with the user's own session (storage RLS limits them to their own folder), then asks the API to record the file. The API re-checks the path and that the object exists.
+
+## Stage 3 endpoints (`/api/v1`)
+
+| Method & path | Auth | Rule |
+|---|---|---|
+| GET `/categories`, GET `/products`, GET `/products/:slug` | none | approved products of active sellers only; filters: q, category, store, condition, price range (kobo), inStock, sort, paging |
+| GET/POST `/seller/products`, GET/PUT `/seller/products/:id` | token | seller id comes from the session; edits blocked in review/archived |
+| POST `/seller/products/:id/status` | token | `submit`, `withdraw`, `archive`, `restore` |
+| POST `/seller/products/:id/variants`, PUT `/seller/variants/:id` | token | own products only |
+| POST `/seller/variants/:id/stock` | token | reasons `restock`, `adjustment`, `correction`; never below zero |
+| GET `/seller/products/:id/movements` | token | own stock history |
+| POST/DELETE `/seller/products/:id/images[/:imageId]` | token | path must be `<sellerId>/<productId>/<uuid>.ext` and exist in storage |
+| GET `/admin/products[/:id]`, POST `/admin/products/:id/decision` | token | `catalog.moderate`; `approve`, `request_changes`, `reject` |
+| GET/POST `/admin/categories`, PUT `/admin/categories/:id` | token | `categories.manage` |

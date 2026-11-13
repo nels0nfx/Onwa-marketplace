@@ -13,6 +13,8 @@ Migrations in `supabase/migrations`, applied in order. Never edit an applied mig
 | 0007_rls_and_grants | RLS enabled everywhere, policies, grants, function privileges |
 | 0008_addresses | `addresses` with per-user default handling and a 10-address limit; `is_ng_state()` |
 | 0009_sellers | `seller_applications`, `seller_application_documents`, `seller_application_events`, `sellers`, `stores`, `store_follows`; functions `save_seller_application`, `submit_seller_application`, `review_seller_application`, `set_seller_status`, `generate_store_slug`, `seller_application_missing` |
+| 0011_catalog | `categories` (+ starter seed), `products`, `product_variants`, `product_images`, `product_events`, immutable `inventory_movements`; functions `create_product`, `add_variant`, `seller_change_product_status`, `review_product`, `apply_stock_movement`, `seller_adjust_stock`, `product_missing`, `create_category`, `update_category`; triggers for re-review, image rules and price/stock rollups |
+| 0012_catalog_storage | Public `product-media` bucket; owner-only write policies (skipped on plain Postgres) |
 | 0010_storage | Buckets `seller-documents` (private, KYC) and `store-media` (public read, owner write) and their storage policies (skipped on plain Postgres) |
 
 ## Access model
@@ -42,3 +44,12 @@ Public storefront reads, follows and every seller/staff write go through the API
 Application states: `draft`, `submitted`, `under_review`, `more_info_required`, `approved`, `rejected`. Seller account states: `active`, `suspended`. A rejected applicant may apply again (new application). One live application per user is enforced by a partial unique index.
 
 Sensitive data: identity documents are private files (no ID number is collected). Bank account numbers are stored in `seller_applications` for verification and future payouts; they are never returned by public endpoints or lists, only to the applicant and to reviewers. Encrypt-at-rest relies on Supabase disk encryption; column-level encryption is a recommended hardening step before payouts go live.
+
+## Stage 3 notes
+
+- **Money** is `bigint` kobo (check: 1 to 10,000,000,000 = ₦100 million). The website converts typed naira to kobo with integer string maths, never floats.
+- **No overselling**: `apply_stock_movement` is one atomic `UPDATE ... WHERE stock_quantity + delta >= 0` plus a ledger row; a `CHECK (stock_quantity >= 0)` is the last line of defence. Checkout (Stage 4) will call it with reason `sale`.
+- **Review rules live in triggers**: no edits while awaiting review or archived; options are immutable; editing content of a live listing, or changing its images, returns it to `pending_review` and removes it from the catalogue until re-approved.
+- **Rollups**: `products.price_from_kobo` and `total_stock` are maintained by trigger from active variants, so the catalogue can sort and filter by price and stock.
+- **Access**: authenticated users can read only their own seller's catalogue rows (and staff with `catalog.moderate` can read all); everything public goes through the API, which only returns approved products of active sellers and never exposes exact stock or SKUs.
+- Free-form `attributes` (key/value text) are used instead of per-category attribute definitions; defining attributes per category is a later improvement.

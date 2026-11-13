@@ -4,7 +4,9 @@ import type {
   RoleSummary, SellerApplication, SellerApplicationDraftInput, SellerStatus, StoreProfile, StoreProfileInput,
 } from '@onwa/shared';
 import { ROLE_DEFINITIONS, ROLE_PERMISSIONS, STATUS_LABELS, canApplicantSubmit, missingForSubmission, nextStatusForReview } from '@onwa/shared';
-import type { AddressRepository, AppDeps, NewDocument, SellerRepository, TokenVerifier, UserAccess, UserRepository } from './deps.js';
+import type { AdminProductDetail, AdminProductRow, BrowseProductsQuery, Category, CategoryNode, CreateProductInput, ProductImage, ProductReviewAction, ProductStatus, ProductUpdateInput, PublicProduct, PublicProductCard, SellerProduct, SellerProductAction, SellerProductRow, StockMovement, UpdateVariantInput, VariantInput } from '@onwa/shared';
+import { nextProductStatusForReview, nextProductStatusForSeller } from '@onwa/shared';
+import type { AddressRepository, AppDeps, CatalogRepository, NewDocument, SellerRepository, TokenVerifier, UserAccess, UserRepository } from './deps.js';
 import { AppError, badRequest, forbidden, notFound } from './lib/errors.js';
 import { createLogger } from './lib/logger.js';
 
@@ -177,7 +179,7 @@ export class FakeSellers implements SellerRepository {
     app.documents.splice(idx, 1);
   }
 
-  async objectExists(_bucket: 'seller-documents' | 'store-media', path: string) { return this.objects.has(path); }
+  async objectExists(_bucket: 'seller-documents' | 'store-media' | 'product-media', path: string) { return this.objects.has(path); }
 
   async listApplications(p: { status?: ApplicationStatus; limit: number; offset: number }): Promise<Paged<AdminApplicationRow>> {
     const rows = [...this.apps.entries()].filter(([, a]) => (p.status ? a.status === p.status : a.status !== 'draft'))
@@ -262,8 +264,148 @@ export class FakeSellers implements SellerRepository {
 
 void STATUS_LABELS;
 
-export function makeDeps(): AppDeps & { users: FakeUsers; addresses: FakeAddresses; sellers: FakeSellers } {
-  return { tokenVerifier: new FakeVerifier(), users: new FakeUsers(), addresses: new FakeAddresses(), sellers: new FakeSellers(), logger: createLogger('error', () => undefined) };
+const SELLER_ID = '20000000-0000-4000-8000-000000000001';
+
+export class FakeCatalog implements CatalogRepository {
+  products = new Map<string, SellerProduct & { sellerId: string; sellerActive: boolean }>();
+  stock = new Map<string, number>();
+  calls: { fn: string; args: unknown[] }[] = [];
+  categories: Category[] = [
+    { id: '50000000-0000-4000-8000-000000000001', parentId: null, slug: 'fashion-clothing', name: 'Fashion and clothing', sortOrder: 10, isActive: true },
+  ];
+  private n = 0;
+  private id(prefix: string) { return `${prefix}0000000-0000-4000-8000-${String(++this.n).padStart(12, '0')}`; }
+
+  seed(over: Partial<SellerProduct> & { sellerId?: string; sellerActive?: boolean }) {
+    const id = over.id ?? this.id('6');
+    const p = {
+      id, slug: over.slug ?? `bag-${this.n}`, name: 'Ankara Tote Bag', description: 'A sturdy handmade tote bag for everyday use.', brand: null, condition: 'new' as const,
+      status: 'draft' as ProductStatus, reviewNote: null, categoryId: this.categories[0]?.id ?? null, categoryName: 'Fashion and clothing', weightGrams: 400,
+      lengthCm: null, widthCm: null, heightCm: null, shippingRequirements: null, options: [], attributes: {}, priceFromKobo: 1500000, totalStock: 5,
+      images: [{ id: this.id('7'), url: 'https://media.example/x.png', altText: null, position: 0 }],
+      variants: [{ id: this.id('8'), sku: null, optionValues: {}, priceKobo: 1500000, salePriceKobo: null, stockQuantity: 5, isActive: true }],
+      createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z', sellerId: SELLER_ID, sellerActive: true, ...over,
+    };
+    this.products.set(id, p);
+    return p;
+  }
+
+  async listCategories(): Promise<CategoryNode[]> { return this.categories.filter((c) => c.isActive).map((c) => ({ ...c, children: [] })); }
+
+  async browseProducts(q: BrowseProductsQuery): Promise<Paged<PublicProductCard>> {
+    const rows = [...this.products.values()].filter((p) => p.status === 'approved' && p.sellerActive && (!q.q || p.name.toLowerCase().includes(q.q.toLowerCase())))
+      .map((p) => ({ slug: p.slug, name: p.name, brand: p.brand, priceFromKobo: p.priceFromKobo, hasSale: false, inStock: p.totalStock > 0, imageUrl: p.images[0]?.url ?? null, storeName: 'Amaka Crafts', storeSlug: 'amaka-crafts' }));
+    return { rows, total: rows.length, limit: q.limit, offset: q.offset };
+  }
+
+  async getPublicProduct(slug: string): Promise<PublicProduct | null> {
+    const p = [...this.products.values()].find((x) => x.slug === slug && x.status === 'approved' && x.sellerActive);
+    if (!p) return null;
+    return {
+      slug: p.slug, name: p.name, description: p.description, brand: p.brand, condition: p.condition, category: { slug: 'fashion-clothing', name: 'Fashion and clothing' },
+      options: p.options, attributes: p.attributes, weightGrams: p.weightGrams, shippingRequirements: p.shippingRequirements, images: p.images,
+      variants: p.variants.filter((v) => v.isActive).map((v) => ({ id: v.id, optionValues: v.optionValues, priceKobo: v.priceKobo, salePriceKobo: v.salePriceKobo, inStock: v.stockQuantity > 0, lowStock: v.stockQuantity > 0 && v.stockQuantity <= 5 })),
+      store: { slug: 'amaka-crafts', name: 'Amaka Crafts', accent: 'gold' },
+    };
+  }
+
+  private own(sellerId: string, id: string) { const p = this.products.get(id); return p && p.sellerId === sellerId ? p : null; }
+  private strip(p: SellerProduct & { sellerId: string; sellerActive: boolean }): SellerProduct { const { sellerId: _s, sellerActive: _a, ...rest } = p; return rest; }
+
+  async listMyProducts(sellerId: string, p: { status?: ProductStatus; limit: number; offset: number }): Promise<Paged<SellerProductRow>> {
+    const rows = [...this.products.values()].filter((x) => x.sellerId === sellerId && (!p.status || x.status === p.status))
+      .map((x) => ({ id: x.id, slug: x.slug, name: x.name, status: x.status, priceFromKobo: x.priceFromKobo, totalStock: x.totalStock, imageUrl: x.images[0]?.url ?? null, updatedAt: x.updatedAt }));
+    return { rows, total: rows.length, limit: p.limit, offset: p.offset };
+  }
+  async getMyProduct(sellerId: string, id: string) { const p = this.own(sellerId, id); return p ? this.strip(p) : null; }
+  async createProduct(sellerId: string, input: CreateProductInput) {
+    this.calls.push({ fn: 'createProduct', args: [sellerId, input] });
+    const p = this.seed({ sellerId, name: input.name, status: 'draft', images: [], description: input.description ?? null });
+    return p.id;
+  }
+  async updateProduct(sellerId: string, id: string, input: ProductUpdateInput) {
+    const p = this.own(sellerId, id);
+    if (!p) throw notFound('Product not found');
+    if (p.status === 'pending_review') throw new AppError(409, 'conflict', 'withdraw the listing from review before editing it');
+    Object.assign(p, { name: input.name, description: input.description ?? null });
+    if (p.status === 'approved') p.status = 'pending_review';
+    return this.strip(p);
+  }
+  async changeProductStatus(sellerId: string, id: string, action: SellerProductAction) {
+    const p = this.own(sellerId, id);
+    if (!p) throw notFound('Product not found');
+    const r = nextProductStatusForSeller(p.status, action);
+    if (!r.allowed) throw new AppError(409, 'conflict', r.reason);
+    if (action === 'submit' && p.images.length === 0) throw badRequest('listing is incomplete: at least one image');
+    p.status = r.to;
+  }
+  async addVariant(sellerId: string, productId: string, input: VariantInput) {
+    if (!this.own(sellerId, productId)) throw notFound('Product not found');
+    this.calls.push({ fn: 'addVariant', args: [sellerId, productId, input] });
+    return this.id('8');
+  }
+  async updateVariant(sellerId: string, variantId: string, _input: UpdateVariantInput) {
+    const found = [...this.products.values()].some((p) => p.sellerId === sellerId && p.variants.some((v) => v.id === variantId));
+    if (!found) throw notFound('Variant not found');
+  }
+  async adjustStock(sellerId: string, variantId: string, delta: number, reason: string) {
+    this.calls.push({ fn: 'adjustStock', args: [sellerId, variantId, delta, reason] });
+    const owned = [...this.products.values()].find((p) => p.sellerId === sellerId && p.variants.some((v) => v.id === variantId));
+    if (!owned) throw notFound('variant not found');
+    const v = owned.variants.find((x) => x.id === variantId);
+    if (!v) throw notFound('variant not found');
+    if (v.stockQuantity + delta < 0) throw new AppError(409, 'conflict', 'insufficient stock');
+    v.stockQuantity += delta;
+    return v.stockQuantity;
+  }
+  async listMovements(_s: string, _p: string, _l: number): Promise<StockMovement[]> { return []; }
+  async addImage(sellerId: string, productId: string, path: string): Promise<ProductImage> {
+    const p = this.own(sellerId, productId);
+    if (!p) throw notFound('Product not found');
+    const img = { id: this.id('7'), url: `https://media.example/${path}`, altText: null, position: p.images.length };
+    p.images.push(img);
+    return img;
+  }
+  async removeImage(sellerId: string, productId: string, imageId: string) {
+    const p = this.own(sellerId, productId);
+    const idx = p?.images.findIndex((i) => i.id === imageId) ?? -1;
+    if (!p || idx < 0) throw notFound('Image not found');
+    p.images.splice(idx, 1);
+  }
+  async listAdminProducts(p: { status?: ProductStatus; limit: number; offset: number }): Promise<Paged<AdminProductRow>> {
+    const status = p.status ?? 'pending_review';
+    const rows = [...this.products.values()].filter((x) => x.status === status).map((x) => ({ id: x.id, slug: x.slug, name: x.name, status: x.status, storeName: 'Amaka Crafts', submittedAt: null, updatedAt: x.updatedAt }));
+    return { rows, total: rows.length, limit: p.limit, offset: p.offset };
+  }
+  async getAdminProduct(id: string): Promise<AdminProductDetail | null> {
+    const p = this.products.get(id);
+    return p ? { ...this.strip(p), storeName: 'Amaka Crafts', storeSlug: 'amaka-crafts', events: [] } : null;
+  }
+  async reviewProduct(actorId: string, id: string, action: ProductReviewAction, note?: string) {
+    this.calls.push({ fn: 'reviewProduct', args: [actorId, id, action, note] });
+    const p = this.products.get(id);
+    if (!p) throw notFound('Product not found');
+    const r = nextProductStatusForReview(p.status, action, note);
+    if (!r.allowed) throw new AppError(409, 'conflict', r.reason);
+    p.status = r.to;
+  }
+  async listAdminCategories() { return this.categories; }
+  async createCategory(actorId: string, name: string, parentId: string | undefined, sortOrder: number) {
+    this.calls.push({ fn: 'createCategory', args: [actorId, name, parentId, sortOrder] });
+    const id = this.id('5');
+    this.categories.push({ id, parentId: parentId ?? null, slug: name.toLowerCase().replace(/\s+/g, '-'), name, sortOrder, isActive: true });
+    return id;
+  }
+  async updateCategory(actorId: string, id: string, input: { name: string; sortOrder: number; isActive: boolean }) {
+    this.calls.push({ fn: 'updateCategory', args: [actorId, id, input] });
+    const c = this.categories.find((x) => x.id === id);
+    if (!c) throw notFound('category not found');
+    Object.assign(c, input);
+  }
+}
+
+export function makeDeps(): AppDeps & { users: FakeUsers; addresses: FakeAddresses; sellers: FakeSellers; catalog: FakeCatalog } {
+  return { tokenVerifier: new FakeVerifier(), users: new FakeUsers(), addresses: new FakeAddresses(), sellers: new FakeSellers(), catalog: new FakeCatalog(), logger: createLogger('error', () => undefined) };
 }
 
 export const testConfig = {

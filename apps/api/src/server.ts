@@ -4,6 +4,7 @@ import { createApp } from './app.js';
 import { loadEnv } from './config/env.js';
 import { createLogger } from './lib/logger.js';
 import { SupabaseAddressRepository } from './modules/addresses/supabaseAddressRepository.js';
+import { SupabaseCatalogRepository } from './modules/catalog/supabaseCatalogRepository.js';
 import { SupabaseSellerRepository } from './modules/sellers/supabaseSellerRepository.js';
 import { SupabaseTokenVerifier, SupabaseUserRepository } from './modules/users/supabaseUserRepository.js';
 
@@ -21,6 +22,7 @@ const app = createApp(
     users: new SupabaseUserRepository(serviceClient),
     addresses: new SupabaseAddressRepository(serviceClient),
     sellers: new SupabaseSellerRepository(serviceClient, env.SUPABASE_URL),
+    catalog: new SupabaseCatalogRepository(serviceClient, env.SUPABASE_URL),
     logger,
   },
   env,

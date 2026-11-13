@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { storeSlugSchema, type PublicStore } from '@onwa/shared';
+import { storeSlugSchema, type Paged, type PublicProductCard, type PublicStore } from '@onwa/shared';
+import { ProductCard } from '@/components/catalog/ProductCard';
 import { Alert } from '@/components/ui/Alert';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { apiPublic, apiRequest } from '@/lib/api';
@@ -43,6 +44,12 @@ export default async function StorePage({ params, searchParams }: { params: Prom
     }
   }
   const message = resolveMessage(sp.e);
+  let products: Paged<PublicProductCard> | null = null;
+  try {
+    products = await apiPublic<Paged<PublicProductCard>>(`/products?store=${store.slug}&limit=12`);
+  } catch {
+    products = null;
+  }
 
   return (
     <div data-accent={store.accent}>
@@ -71,7 +78,12 @@ export default async function StorePage({ params, searchParams }: { params: Prom
         {message ? <Alert tone={message.tone}>{message.text}</Alert> : null}
         <section className="stack" aria-labelledby="listings-title">
           <h2 id="listings-title">Listings</h2>
-          <p className="muted">This store has no listings yet. Products, digital items and services arrive in upcoming releases.</p>
+          {products && products.rows.length > 0 ? (
+            <>
+              <div className="product-grid">{products.rows.map((p) => <ProductCard key={p.slug} product={p} />)}</div>
+              {products.total > products.rows.length ? <p><Link href={`/products?store=${store.slug}`}>See all {products.total} products</Link></p> : null}
+            </>
+          ) : <p className="muted">This store has no products yet. Digital items and services arrive in upcoming releases.</p>}
         </section>
         {store.description ? <section className="stack" aria-labelledby="about-title"><h2 id="about-title">About</h2><p className="prose">{store.description}</p></section> : null}
         {store.deliveryInfo ? <section className="stack" aria-labelledby="delivery-title"><h2 id="delivery-title">Delivery information</h2><p className="prose">{store.deliveryInfo}</p></section> : null}

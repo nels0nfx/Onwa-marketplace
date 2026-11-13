@@ -1,4 +1,7 @@
 import type {
+  AdminProductDetail, AdminProductRow, BrowseProductsQuery, Category, CategoryNode, CreateProductInput, ProductImage,
+  ProductReviewAction, ProductStatus, ProductUpdateInput, PublicProduct, PublicProductCard, SellerProduct, SellerProductAction,
+  SellerProductRow, StockMovement, UpdateVariantInput, VariantInput,
   AdminApplicationDetail, AdminApplicationRow, AdminSellerRow, AdminUserRow, Address, AddressInput, ApplicationDocument,
   ApplicationStatus, AuditLogRow, Paged, PermissionCode, Profile, PublicStore, PublicStoreCard, ReviewAction, RoleCode,
   RoleSummary, SellerApplication, SellerApplicationDraftInput, SellerStatus, StoreProfile, StoreProfileInput,
@@ -53,7 +56,7 @@ export interface SellerRepository {
   submitApplication(userId: string): Promise<SellerApplication>;
   addDocument(userId: string, applicationId: string, doc: NewDocument): Promise<ApplicationDocument>;
   removeDocument(userId: string, documentId: string): Promise<void>;
-  objectExists(bucket: 'seller-documents' | 'store-media', path: string): Promise<boolean>;
+  objectExists(bucket: 'seller-documents' | 'store-media' | 'product-media', path: string): Promise<boolean>;
   // reviewer
   listApplications(params: { status?: ApplicationStatus; limit: number; offset: number }): Promise<Paged<AdminApplicationRow>>;
   getApplicationDetail(id: string): Promise<AdminApplicationDetail | null>;
@@ -72,10 +75,37 @@ export interface SellerRepository {
   listFollowedSlugs(userId: string): Promise<string[]>;
 }
 
+export interface CatalogRepository {
+  // public
+  listCategories(): Promise<CategoryNode[]>;
+  browseProducts(q: BrowseProductsQuery): Promise<Paged<PublicProductCard>>;
+  getPublicProduct(slug: string): Promise<PublicProduct | null>;
+  // seller (every call is scoped to the seller id)
+  listMyProducts(sellerId: string, p: { status?: ProductStatus; limit: number; offset: number }): Promise<Paged<SellerProductRow>>;
+  getMyProduct(sellerId: string, id: string): Promise<SellerProduct | null>;
+  createProduct(sellerId: string, input: CreateProductInput): Promise<string>;
+  updateProduct(sellerId: string, id: string, input: ProductUpdateInput): Promise<SellerProduct>;
+  changeProductStatus(sellerId: string, id: string, action: SellerProductAction): Promise<void>;
+  addVariant(sellerId: string, productId: string, input: VariantInput): Promise<string>;
+  updateVariant(sellerId: string, variantId: string, input: UpdateVariantInput): Promise<void>;
+  adjustStock(sellerId: string, variantId: string, delta: number, reason: string, note?: string): Promise<number>;
+  listMovements(sellerId: string, productId: string, limit: number): Promise<StockMovement[]>;
+  addImage(sellerId: string, productId: string, path: string, altText?: string): Promise<ProductImage>;
+  removeImage(sellerId: string, productId: string, imageId: string): Promise<void>;
+  // staff
+  listAdminProducts(p: { status?: ProductStatus; limit: number; offset: number }): Promise<Paged<AdminProductRow>>;
+  getAdminProduct(id: string): Promise<AdminProductDetail | null>;
+  reviewProduct(actorId: string, id: string, action: ProductReviewAction, note?: string): Promise<void>;
+  listAdminCategories(): Promise<Category[]>;
+  createCategory(actorId: string, name: string, parentId: string | undefined, sortOrder: number): Promise<string>;
+  updateCategory(actorId: string, id: string, input: { name: string; sortOrder: number; isActive: boolean }): Promise<void>;
+}
+
 export interface AppDeps {
   tokenVerifier: TokenVerifier;
   users: UserRepository;
   addresses: AddressRepository;
   sellers: SellerRepository;
+  catalog: CatalogRepository;
   logger: Logger;
 }
