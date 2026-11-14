@@ -7,3 +7,4 @@ export * from './nigeria.js';
 export * from './seller.js';
 export * from './files.js';
 export * from './catalog.js';
+export * from './orders.js';

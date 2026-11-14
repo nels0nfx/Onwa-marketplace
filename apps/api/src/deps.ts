@@ -1,4 +1,5 @@
 import type {
+  AdminOrderRow, CartView, OrderAction, OrderDetail, OrderStatus, OrderSummary, PhysicalStatus, SellerOrderDetail, SellerOrderRow,
   AdminProductDetail, AdminProductRow, BrowseProductsQuery, Category, CategoryNode, CreateProductInput, ProductImage,
   ProductReviewAction, ProductStatus, ProductUpdateInput, PublicProduct, PublicProductCard, SellerProduct, SellerProductAction,
   SellerProductRow, StockMovement, UpdateVariantInput, VariantInput,
@@ -101,11 +102,28 @@ export interface CatalogRepository {
   updateCategory(actorId: string, id: string, input: { name: string; sortOrder: number; isActive: boolean }): Promise<void>;
 }
 
+export interface OrderRepository {
+  getCart(userId: string): Promise<CartView>;
+  addToCart(userId: string, variantId: string, quantity: number): Promise<void>;
+  setCartQuantity(userId: string, itemId: string, quantity: number): Promise<void>;
+  removeCartItem(userId: string, itemId: string): Promise<void>;
+  createOrder(userId: string, storeSlug: string, addressId: string, note: string | undefined, idempotencyKey: string): Promise<string>;
+  listOrders(userId: string, p: { limit: number; offset: number }): Promise<Paged<OrderSummary>>;
+  getOrder(userId: string, id: string): Promise<OrderDetail | null>;
+  listSellerOrders(sellerId: string, p: { status?: PhysicalStatus; limit: number; offset: number }): Promise<Paged<SellerOrderRow>>;
+  getSellerOrder(sellerId: string, id: string): Promise<SellerOrderDetail | null>;
+  changeStatus(actorId: string, sellerOrderId: string, action: OrderAction, note?: string): Promise<void>;
+  listAdminOrders(p: { status?: OrderStatus; limit: number; offset: number }): Promise<Paged<AdminOrderRow>>;
+  getAdminOrder(id: string): Promise<OrderDetail | null>;
+  expireUnpaid(): Promise<number>;
+}
+
 export interface AppDeps {
   tokenVerifier: TokenVerifier;
   users: UserRepository;
   addresses: AddressRepository;
   sellers: SellerRepository;
   catalog: CatalogRepository;
+  orders: OrderRepository;
   logger: Logger;
 }

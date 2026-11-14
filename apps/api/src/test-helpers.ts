@@ -4,9 +4,11 @@ import type {
   RoleSummary, SellerApplication, SellerApplicationDraftInput, SellerStatus, StoreProfile, StoreProfileInput,
 } from '@onwa/shared';
 import { ROLE_DEFINITIONS, ROLE_PERMISSIONS, STATUS_LABELS, canApplicantSubmit, missingForSubmission, nextStatusForReview } from '@onwa/shared';
+import type { AdminOrderRow, CartView, OrderAction, OrderDetail, OrderStatus, OrderSummary, PhysicalStatus, SellerOrderDetail, SellerOrderRow } from '@onwa/shared';
+import { availableOrderActions, nextOrderStatus } from '@onwa/shared';
 import type { AdminProductDetail, AdminProductRow, BrowseProductsQuery, Category, CategoryNode, CreateProductInput, ProductImage, ProductReviewAction, ProductStatus, ProductUpdateInput, PublicProduct, PublicProductCard, SellerProduct, SellerProductAction, SellerProductRow, StockMovement, UpdateVariantInput, VariantInput } from '@onwa/shared';
 import { nextProductStatusForReview, nextProductStatusForSeller } from '@onwa/shared';
-import type { AddressRepository, AppDeps, CatalogRepository, NewDocument, SellerRepository, TokenVerifier, UserAccess, UserRepository } from './deps.js';
+import type { AddressRepository, AppDeps, CatalogRepository, OrderRepository, NewDocument, SellerRepository, TokenVerifier, UserAccess, UserRepository } from './deps.js';
 import { AppError, badRequest, forbidden, notFound } from './lib/errors.js';
 import { createLogger } from './lib/logger.js';
 
@@ -19,6 +21,7 @@ export const IDS = {
   suspended: '00000000-0000-4000-8000-00000000000f',
   manager: '00000000-0000-4000-8000-000000000010',
   seller: '00000000-0000-4000-8000-000000000011',
+  ops: '00000000-0000-4000-8000-000000000012',
 } as const;
 
 function profile(id: string, name: string, status: Profile['status'] = 'active'): Profile {
@@ -35,6 +38,7 @@ export class FakeUsers implements UserRepository {
     [IDS.suspended, profile(IDS.suspended, 'Sam', 'suspended')],
     [IDS.manager, profile(IDS.manager, 'Mia')],
     [IDS.seller, profile(IDS.seller, 'Selma')],
+    [IDS.ops, profile(IDS.ops, 'Omar')],
   ]);
   roles = new Map<string, RoleCode[]>([
     [IDS.alice, ['customer']],
@@ -45,6 +49,7 @@ export class FakeUsers implements UserRepository {
     [IDS.suspended, ['customer']],
     [IDS.manager, ['customer', 'seller_manager']],
     [IDS.seller, ['customer', 'seller']],
+    [IDS.ops, ['customer', 'operations_manager']],
   ]);
   calls: { fn: string; args: unknown[] }[] = [];
 
@@ -85,7 +90,7 @@ export class FakeUsers implements UserRepository {
 export class FakeVerifier implements TokenVerifier {
   tokens = new Map<string, string>([
     ['tok-alice', IDS.alice], ['tok-bob', IDS.bob], ['tok-carol', IDS.carol], ['tok-dave', IDS.dave], ['tok-erin', IDS.erin], ['tok-suspended', IDS.suspended],
-    ['tok-manager', IDS.manager], ['tok-seller', IDS.seller],
+    ['tok-manager', IDS.manager], ['tok-seller', IDS.seller], ['tok-ops', IDS.ops],
   ]);
   async verify(token: string) {
     const id = this.tokens.get(token);
@@ -404,8 +409,102 @@ export class FakeCatalog implements CatalogRepository {
   }
 }
 
-export function makeDeps(): AppDeps & { users: FakeUsers; addresses: FakeAddresses; sellers: FakeSellers; catalog: FakeCatalog } {
-  return { tokenVerifier: new FakeVerifier(), users: new FakeUsers(), addresses: new FakeAddresses(), sellers: new FakeSellers(), catalog: new FakeCatalog(), logger: createLogger('error', () => undefined) };
+interface FakeSub { id: string; orderId: string; status: PhysicalStatus; paid: boolean; deliveredAt: string | null; sellerId: string; buyerId: string; items: { variantId: string; qty: number }[] }
+
+export class FakeOrders implements OrderRepository {
+  cart = new Map<string, { id: string; variantId: string; quantity: number }[]>();
+  subs = new Map<string, FakeSub>();
+  orders = new Map<string, { id: string; number: number; buyerId: string; status: OrderStatus; key: string }>();
+  stock = new Map<string, number>([['90000000-0000-4000-8000-000000000001', 5]]);
+  calls: { fn: string; args: unknown[] }[] = [];
+  swept = 0;
+  private n = 0;
+  private id(p: string) { return `${p}0000000-0000-4000-8000-${String(++this.n).padStart(12, '0')}`; }
+
+  async getCart(userId: string): Promise<CartView> {
+    const items = this.cart.get(userId) ?? [];
+    return { groups: items.length ? [{ sellerId: '20000000-0000-4000-8000-000000000001', store: { slug: 'amaka-crafts', name: 'Amaka Crafts' }, subtotalKobo: 0, checkoutReady: true,
+      items: items.map((i) => ({ id: i.id, variantId: i.variantId, productSlug: 'x-bag', productName: 'Bag', variantLabel: 'Standard', imageUrl: null, listPriceKobo: 1000, unitPriceKobo: 1000, quantity: i.quantity, lineTotalKobo: 1000 * i.quantity, available: true, maxQuantity: 5, problem: null })) }] : [],
+      itemCount: items.reduce((n, i) => n + i.quantity, 0) };
+  }
+  async addToCart(userId: string, variantId: string, quantity: number) {
+    const have = this.stock.get(variantId);
+    if (have === undefined) throw notFound('item not found');
+    const items = this.cart.get(userId) ?? [];
+    const line = items.find((i) => i.variantId === variantId);
+    if ((line?.quantity ?? 0) + quantity > have) throw new AppError(409, 'conflict', `only ${have} available`);
+    if (line) line.quantity += quantity; else items.push({ id: this.id('a'), variantId, quantity });
+    this.cart.set(userId, items);
+  }
+  async setCartQuantity(userId: string, itemId: string, quantity: number) {
+    const line = (this.cart.get(userId) ?? []).find((i) => i.id === itemId);
+    if (!line) throw notFound('cart item not found');
+    line.quantity = quantity;
+  }
+  async removeCartItem(userId: string, itemId: string) { this.cart.set(userId, (this.cart.get(userId) ?? []).filter((i) => i.id !== itemId)); }
+  async createOrder(userId: string, storeSlug: string, addressId: string, _note: string | undefined, key: string) {
+    this.calls.push({ fn: 'createOrder', args: [userId, storeSlug, addressId, key] });
+    const existing = [...this.orders.values()].find((o) => o.buyerId === userId && o.key === key);
+    if (existing) return existing.id;
+    const items = this.cart.get(userId) ?? [];
+    if (items.length === 0) throw new AppError(400, 'bad_request', 'there are no items in your cart for this store');
+    for (const i of items) this.stock.set(i.variantId, (this.stock.get(i.variantId) ?? 0) - i.quantity);
+    const id = this.id('b');
+    this.orders.set(id, { id, number: 100000 + this.orders.size + 1, buyerId: userId, status: 'pending_payment', key });
+    const sid = this.id('c');
+    this.subs.set(sid, { id: sid, orderId: id, status: 'pending_payment', paid: false, deliveredAt: null, sellerId: '20000000-0000-4000-8000-000000000001', buyerId: userId, items: items.map((i) => ({ variantId: i.variantId, qty: i.quantity })) });
+    this.cart.set(userId, []);
+    return id;
+  }
+  private detail(orderId: string, actors: ('buyer' | 'staff')[]): OrderDetail | null {
+    const o = this.orders.get(orderId);
+    if (!o) return null;
+    const subs = [...this.subs.values()].filter((s) => s.orderId === orderId);
+    return { id: o.id, orderNumber: o.number, status: o.status, totalKobo: 0, subtotalKobo: 0, shippingKobo: 0, currency: 'NGN', note: null, expiresAt: null, paidAt: null, createdAt: '2026-01-01T00:00:00.000Z', itemCount: 1, storeNames: ['Amaka Crafts'],
+      shippingAddress: { recipientName: 'R', phone: '+2348031234567', line1: '1 Road', line2: null, city: 'Enugu', lga: 'Enugu North', state: 'Enugu', landmark: null, postalCode: null },
+      suborders: subs.map((s) => ({ id: s.id, status: s.status, store: { slug: 'amaka-crafts', name: 'Amaka Crafts' }, subtotalKobo: 0, shippingKobo: 0, totalKobo: 0, deliveredAt: s.deliveredAt, items: [], history: [], actions: availableOrderActions(s.status, actors, { deliveredAt: s.deliveredAt ? new Date(s.deliveredAt) : null }) })) };
+  }
+  async listOrders(userId: string, p: { limit: number; offset: number }): Promise<Paged<OrderSummary>> {
+    const rows = [...this.orders.values()].filter((o) => o.buyerId === userId).map((o) => ({ id: o.id, orderNumber: o.number, status: o.status, totalKobo: 0, itemCount: 1, storeNames: ['Amaka Crafts'], createdAt: '2026-01-01T00:00:00.000Z' }));
+    return { rows, total: rows.length, limit: p.limit, offset: p.offset };
+  }
+  async getOrder(userId: string, id: string) { const o = this.orders.get(id); return o && o.buyerId === userId ? this.detail(id, ['buyer']) : null; }
+  async listSellerOrders(sellerId: string, p: { status?: PhysicalStatus; limit: number; offset: number }): Promise<Paged<SellerOrderRow>> {
+    const rows = [...this.subs.values()].filter((s) => s.sellerId === sellerId && s.paid).map((s) => ({ id: s.id, orderNumber: this.orders.get(s.orderId)?.number ?? 0, status: s.status, totalKobo: 0, itemCount: 1, createdAt: '2026-01-01T00:00:00.000Z' }));
+    return { rows, total: rows.length, limit: p.limit, offset: p.offset };
+  }
+  async getSellerOrder(sellerId: string, id: string): Promise<SellerOrderDetail | null> {
+    const s = this.subs.get(id);
+    if (!s || s.sellerId !== sellerId || !s.paid) return null;
+    return { id: s.id, orderNumber: this.orders.get(s.orderId)?.number ?? 0, status: s.status, subtotalKobo: 0, shippingKobo: 0, totalKobo: 0, createdAt: '2026-01-01T00:00:00.000Z', deliveredAt: s.deliveredAt, buyer: { name: 'R', phone: '+2348031234567' },
+      shippingAddress: { recipientName: 'R', phone: '+2348031234567', line1: '1 Road', line2: null, city: 'Enugu', lga: 'Enugu North', state: 'Enugu', landmark: null, postalCode: null }, note: null, items: [], history: [], actions: availableOrderActions(s.status, ['seller']) };
+  }
+  async changeStatus(actorId: string, subId: string, action: OrderAction, note?: string) {
+    this.calls.push({ fn: 'changeStatus', args: [actorId, subId, action, note] });
+    const s = this.subs.get(subId);
+    if (!s) throw notFound('order not found');
+    const isBuyer = s.buyerId === actorId;
+    const isSeller = actorId === IDS.seller && s.sellerId === '20000000-0000-4000-8000-000000000001';
+    const isStaff = actorId === IDS.ops || actorId === IDS.carol;
+    if (!isBuyer && !isSeller && !isStaff) throw notFound('order not found');
+    const actors = [...(isBuyer ? ['buyer' as const] : []), ...(isSeller ? ['seller' as const] : []), ...(isStaff ? ['staff' as const] : [])];
+    const r = nextOrderStatus(s.status, action, actors, { deliveredAt: s.deliveredAt ? new Date(s.deliveredAt) : null });
+    if (!r.allowed) throw new AppError(r.reason.startsWith('You cannot') ? 403 : 409, r.reason.startsWith('You cannot') ? 'forbidden' : 'conflict', r.reason);
+    if (action === 'cancel') for (const i of s.items) this.stock.set(i.variantId, (this.stock.get(i.variantId) ?? 0) + i.qty);
+    s.status = r.to;
+    if (r.to === 'cancelled') { const o = this.orders.get(s.orderId); if (o) o.status = 'cancelled'; }
+    if (r.to === 'delivered') s.deliveredAt = new Date().toISOString();
+  }
+  async listAdminOrders(p: { status?: OrderStatus; limit: number; offset: number }): Promise<Paged<AdminOrderRow>> {
+    const rows = [...this.orders.values()].filter((o) => !p.status || o.status === p.status).map((o) => ({ id: o.id, orderNumber: o.number, status: o.status, buyerEmail: `${o.buyerId}@example.test`, totalKobo: 0, createdAt: '2026-01-01T00:00:00.000Z', expiresAt: null }));
+    return { rows, total: rows.length, limit: p.limit, offset: p.offset };
+  }
+  async getAdminOrder(id: string) { return this.detail(id, ['staff']); }
+  async expireUnpaid() { this.swept += 1; return 0; }
+}
+
+export function makeDeps(): AppDeps & { users: FakeUsers; addresses: FakeAddresses; sellers: FakeSellers; catalog: FakeCatalog; orders: FakeOrders } {
+  return { tokenVerifier: new FakeVerifier(), users: new FakeUsers(), addresses: new FakeAddresses(), sellers: new FakeSellers(), catalog: new FakeCatalog(), orders: new FakeOrders(), logger: createLogger('error', () => undefined) };
 }
 
 export const testConfig = {

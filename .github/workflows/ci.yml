@@ -48,3 +48,4 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f supabase/tests/001_rbac_rls.sql
           psql -v ON_ERROR_STOP=1 -f supabase/tests/002_sellers_addresses.sql
           psql -v ON_ERROR_STOP=1 -f supabase/tests/003_catalog.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/tests/004_orders.sql

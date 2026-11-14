@@ -15,6 +15,7 @@ export async function SiteHeader() {
           <ThemeToggle />
           {user ? (
             <>
+              <Link className="nav-link" href="/cart">Cart</Link>
               <Link className="nav-link" href="/account">Account</Link>
               <form action={signOutAction}><button className="btn btn-ghost btn-sm" type="submit">Sign out</button></form>
             </>

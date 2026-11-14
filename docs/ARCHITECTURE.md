@@ -63,3 +63,17 @@ Uploads: the website validates size and real file type (magic bytes), uploads to
 | POST/DELETE `/seller/products/:id/images[/:imageId]` | token | path must be `<sellerId>/<productId>/<uuid>.ext` and exist in storage |
 | GET `/admin/products[/:id]`, POST `/admin/products/:id/decision` | token | `catalog.moderate`; `approve`, `request_changes`, `reject` |
 | GET/POST `/admin/categories`, PUT `/admin/categories/:id` | token | `categories.manage` |
+
+## Stage 4 endpoints (`/api/v1`)
+
+| Method & path | Auth | Rule |
+|---|---|---|
+| GET `/cart`, POST `/cart/items`, PUT/DELETE `/cart/items/:id` | token | own cart only; body never carries prices; stock checked in SQL |
+| POST `/checkout` | token | body: `storeSlug`, `addressId`, optional `note`, `idempotencyKey`; releases expired reservations first |
+| GET `/orders`, GET `/orders/:id` | token | own orders only |
+| POST `/suborders/:id/action` | token | `cancel`, `start_processing`, `mark_ready`, `dispatch`, `mark_in_transit`, `mark_delivered`, `confirm_received`, `request_return`; the database decides who may do what |
+| GET `/seller/orders[/:id]` | token | the seller's paid orders only; customer address released only for paid orders |
+| GET `/admin/orders[/:id]` | token | `orders.read` |
+| POST `/admin/orders/expire-unpaid` | token | `orders.manage` |
+
+There is no endpoint, parameter or action that confirms payment.

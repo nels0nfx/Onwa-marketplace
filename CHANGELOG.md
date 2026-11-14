@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0 - Stage 4: Cart, checkout and orders
+- Added: cart, checkout with idempotency, atomic stock reservation, parent/seller orders with immutable item snapshots, status history, physical order workflow, expiry of unpaid orders, buyer/seller/staff order pages, add to cart on product pages.
+- Database: migration 0013; SQL tests 004.
+- API: cart, checkout, orders, seller orders, admin orders.
+- Deliberately not included: any way to mark an order paid (Stage 5), delivery fees (Stage 8), commissions (Stage 5).
+
 ## 0.3.0 - Stage 3: Catalogue and inventory
 - Added: categories (managed by staff), physical products with variants, kobo pricing, images, attributes, shipping details; immutable inventory ledger with a no-oversell stock function; listing review workflow with automatic re-review of edited live listings; seller product pages; admin moderation queue and category manager; public `/products`, `/product/<slug>`, store product grids.
 - Database: migrations 0011, 0012; SQL tests 003.

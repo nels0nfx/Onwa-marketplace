@@ -54,6 +54,7 @@ export interface ApiErrorBody {
 
 // ---------------------------------------------------------------- Stage 2
 import type { ProductCondition, ProductStatus } from './catalog.js';
+import type { OrderAction, OrderStatus, PhysicalStatus } from './orders.js';
 import type { ApplicationStatus, DocumentKind, SellerStatus, StoreAccent } from './seller.js';
 
 export interface Address {
@@ -311,4 +312,138 @@ export interface AdminProductDetail extends SellerProduct {
   storeName: string;
   storeSlug: string;
   events: ProductEvent[];
+}
+
+// ---------------------------------------------------------------- Stage 4
+export interface CartItemView {
+  id: string;
+  variantId: string;
+  productSlug: string;
+  productName: string;
+  variantLabel: string;
+  imageUrl: string | null;
+  listPriceKobo: number;
+  unitPriceKobo: number;
+  quantity: number;
+  lineTotalKobo: number;
+  available: boolean;
+  /** Most the customer can currently buy (stock, capped at the per-line limit). */
+  maxQuantity: number;
+  problem: string | null;
+}
+
+export interface CartGroup {
+  sellerId: string;
+  store: { slug: string; name: string };
+  items: CartItemView[];
+  subtotalKobo: number;
+  checkoutReady: boolean;
+}
+
+export interface CartView {
+  groups: CartGroup[];
+  itemCount: number;
+}
+
+export interface ShippingAddressSnapshot {
+  recipientName: string;
+  phone: string;
+  line1: string;
+  line2: string | null;
+  city: string;
+  lga: string;
+  state: string;
+  landmark: string | null;
+  postalCode: string | null;
+}
+
+export interface OrderItemView {
+  id: string;
+  productName: string;
+  productSlug: string | null;
+  variantLabel: string;
+  sku: string | null;
+  imageUrl: string | null;
+  unitPriceKobo: number;
+  quantity: number;
+  lineTotalKobo: number;
+}
+
+export interface OrderHistoryEntry {
+  id: string;
+  fromStatus: string | null;
+  toStatus: string;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface SuborderView {
+  id: string;
+  status: PhysicalStatus;
+  store: { slug: string; name: string };
+  subtotalKobo: number;
+  shippingKobo: number;
+  totalKobo: number;
+  deliveredAt: string | null;
+  items: OrderItemView[];
+  history: OrderHistoryEntry[];
+  /** Actions the viewer may take now (computed from the shared state machine; the database re-checks). */
+  actions: OrderAction[];
+}
+
+export interface OrderSummary {
+  id: string;
+  orderNumber: number;
+  status: OrderStatus;
+  totalKobo: number;
+  itemCount: number;
+  storeNames: string[];
+  createdAt: string;
+}
+
+export interface OrderDetail extends OrderSummary {
+  subtotalKobo: number;
+  shippingKobo: number;
+  currency: string;
+  note: string | null;
+  expiresAt: string | null;
+  paidAt: string | null;
+  shippingAddress: ShippingAddressSnapshot;
+  suborders: SuborderView[];
+}
+
+export interface SellerOrderRow {
+  id: string;
+  orderNumber: number;
+  status: PhysicalStatus;
+  totalKobo: number;
+  itemCount: number;
+  createdAt: string;
+}
+
+export interface SellerOrderDetail {
+  id: string;
+  orderNumber: number;
+  status: PhysicalStatus;
+  subtotalKobo: number;
+  shippingKobo: number;
+  totalKobo: number;
+  createdAt: string;
+  deliveredAt: string | null;
+  buyer: { name: string; phone: string } | null;
+  shippingAddress: ShippingAddressSnapshot | null;
+  note: string | null;
+  items: OrderItemView[];
+  history: OrderHistoryEntry[];
+  actions: OrderAction[];
+}
+
+export interface AdminOrderRow {
+  id: string;
+  orderNumber: number;
+  status: OrderStatus;
+  buyerEmail: string;
+  totalKobo: number;
+  createdAt: string;
+  expiresAt: string | null;
 }

@@ -6,7 +6,11 @@ Stage 2 additions: private KYC bucket with owner-folder and staff-read storage p
 
 Stage 3 additions: stock and listing state can only change through audited database functions or triggers (clients and the browser cannot write them); inventory ledger is append-only; sellers are scoped by session-derived seller id on every route; public product responses omit exact stock and SKUs; uploaded product image paths are validated (folder, generated name, extension) and files verified by content type; moderators cannot review their own seller listings.
 
+Stage 4 additions: prices, totals and availability are computed in the database at checkout (the browser sends only variant ids, quantities, an address id and an idempotency key); stock reservation is atomic and cannot oversell; no code path can mark an order paid except the internal function reserved for the verified payment webhook; order items and history are append-only; sellers cannot see unpaid orders or customer contact details before payment; order actions are validated by the database for each actor; buyers cannot buy their own products.
+
 Known gaps / required before production:
+- Reservation expiry runs when people check out or view orders and from the staff button. There is no scheduler yet; add a Render cron job calling `expire_unpaid_orders` before launch (Stage 5/10).
+- Several unpaid orders can hold stock for 30 minutes each; add per-user limits on open unpaid orders before launch.
 - Product images are public-read (random file names); draft images are reachable by anyone who has the URL.
 - No automated content/prohibited-item screening: moderation is manual.
 - Uploaded files are not virus-scanned. Add scanning (for example a Supabase Edge Function or third-party scanner) before relying on uploads at scale.

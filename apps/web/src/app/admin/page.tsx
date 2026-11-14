@@ -54,7 +54,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       <div className="page-head">
         <h1>Administration</h1>
         <div className="row">{me.roles.map((r) => <Badge key={r} staff={ROLE_DEFINITIONS[r].isStaff}>{ROLE_DEFINITIONS[r].name}</Badge>)}</div>
-        <p className="muted">Modules for sellers, catalogue, orders and finance are added in later releases. This release covers accounts, roles, seller applications, product moderation, categories and the audit log.</p>
+        <p className="muted">Modules for sellers, catalogue, orders and finance are added in later releases. This release covers accounts, roles, seller applications, product moderation, categories, orders and the audit log.</p>
       </div>
       {message ? <Alert tone={message.tone}>{message.text}</Alert> : null}
       {can('sellers.read') ? (
@@ -69,6 +69,13 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           <h2 id="products-card-title">Product listings</h2>
           <p className="muted">Review listings submitted by sellers before they go live.</p>
           <div><Link className="btn btn-secondary" href="/admin/products">Open moderation queue</Link></div>
+        </section>
+      ) : null}
+      {can('orders.read') ? (
+        <section className="card stack" aria-labelledby="orders-card-title">
+          <h2 id="orders-card-title">Orders</h2>
+          <p className="muted">See every order, cancel unpaid ones and clean up expired reservations.</p>
+          <div><Link className="btn btn-secondary" href="/admin/orders">Open orders</Link></div>
         </section>
       ) : null}
       {can('categories.manage') ? (
@@ -140,7 +147,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         </section>
       ) : null}
 
-      {!users && !audit && !can('sellers.read') && !can('catalog.moderate') && !can('categories.manage') && !loadFailed ? <p className="muted">Your role does not include any modules available in this release.</p> : null}
+      {!users && !audit && !can('sellers.read') && !can('catalog.moderate') && !can('categories.manage') && !can('orders.read') && !loadFailed ? <p className="muted">Your role does not include any modules available in this release.</p> : null}
     </div>
   );
 }

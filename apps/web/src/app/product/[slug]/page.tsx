@@ -2,7 +2,11 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { formatNaira, productSlugSchema, variantLabel, type PublicProduct } from '@onwa/shared';
+import { SubmitButton } from '@/components/ui/SubmitButton';
+import { addToCartAction } from '@/app/cart/actions';
 import { apiPublic } from '@/lib/api';
+import { resolveMessage } from '@/lib/messages';
+import { Alert } from '@/components/ui/Alert';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 45;
@@ -22,8 +26,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 }
 
-export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function ProductPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ e?: string; m?: string }> }) {
   const { slug } = await params;
+  const sp = await searchParams;
+  const message = resolveMessage(sp.e ?? sp.m);
   const p = await load(slug);
   if (!p) notFound();
   const attrs = Object.entries(p.attributes);
@@ -51,7 +57,18 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                 </div>
               ))}
             </div>
-            <p className="alert alert-info">Ordering opens in an upcoming release. You can follow the store to be ready.</p>
+            {message ? <Alert tone={message.tone}>{message.text}</Alert> : null}
+            {p.variants.some((v) => v.inStock) ? (
+              <form action={addToCartAction} className="stack">
+                <input type="hidden" name="returnTo" value={`/product/${p.slug}`} />
+                <div className="field"><label htmlFor="variantId">{p.options.length ? 'Choose an option' : 'Item'}</label>
+                  <select id="variantId" name="variantId" className="select" required>
+                    {p.variants.filter((v) => v.inStock).map((v) => <option key={v.id} value={v.id}>{variantLabel(v.optionValues)} · {formatNaira(v.salePriceKobo ?? v.priceKobo)}</option>)}
+                  </select></div>
+                <div className="field"><label htmlFor="quantity">Quantity</label><input id="quantity" name="quantity" className="input" style={{ maxWidth: '7rem' }} type="number" min={1} max={99} defaultValue={1} required /></div>
+                <div><SubmitButton pendingText="Adding">Add to cart</SubmitButton></div>
+              </form>
+            ) : <p className="alert alert-info">This product is out of stock right now.</p>}
           </section>
 
           {p.description ? <section className="stack" aria-labelledby="desc-title"><h2 id="desc-title" style={{ fontSize: '1.4rem' }}>Description</h2><p className="prose">{p.description}</p></section> : null}

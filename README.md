@@ -2,9 +2,20 @@
 
 **One marketplace. Endless possibilities.**
 
-ONWA is a Nigerian multi-vendor marketplace for physical products, digital downloads and services (default currency NGN). This repository is built in stages. **This is release v0.3.0, Stage 3: Catalogue and inventory** (builds on Stage 2: Customers and sellers, and Stage 1: Foundation).
+ONWA is a Nigerian multi-vendor marketplace for physical products, digital downloads and services (default currency NGN). This repository is built in stages. **This is release v0.4.0, Stage 4: Cart, checkout and orders** (builds on Stages 1 to 3).
 
-## What v0.3.0 adds (Stage 3)
+## What v0.4.0 adds (Stage 4)
+
+- **Cart** (`/cart`): add from product pages, change quantity, remove. Stock is checked when you add and again at checkout. One cart can hold items from several stores; each store is checked out separately.
+- **Checkout** (`/checkout/<store>`): choose a saved address, add a note, place the order. Prices come from the database, never from the browser. A one-time key stops a double tap creating two orders.
+- **Stock reservation**: placing an order removes the stock atomically (and rolls everything back if any item is short). Cancelling, or an unpaid order expiring after 30 minutes, returns it.
+- **Orders**: a parent order plus one seller order per store, immutable item snapshots at the price paid, full status history. Buyers see `/orders`; sellers see paid orders at `/seller/orders`; staff see `/admin/orders`.
+- **Order workflow** (physical): awaiting payment, paid, processing, ready for dispatch, dispatched, in transit, delivered, completed, cancelled, return requested (returned, refund pending, refunded are reserved for Stage 5). Every transition is validated in the database and mirrored by tested shared rules.
+- Migration `0013`; SQL tests `004_orders.sql`.
+
+**Important:** payments are Stage 5. Orders therefore stop at **Awaiting payment** and expire after 30 minutes. There is deliberately no way to mark an order paid from the website or API; the database function exists only for the verified Paystack webhook that Stage 5 adds. Delivery fees are ₦0 until delivery pricing (Stage 8), and commissions are added with payments (Stage 5).
+
+## What v0.3.0 added (Stage 3)
 
 - **Categories** (two levels, starter set seeded, staff can add/rename/hide) managed at `/admin/categories`.
 - **Physical products** with variants (up to 3 options, 100 variants), prices in integer kobo, sale prices, SKUs, attributes, weight and dimensions, up to 8 images (public `product-media` bucket).
@@ -51,10 +62,11 @@ docs/             Architecture, database, security, deployment, Termux, testing,
 
 ## Setup
 
-0. **Upgrading from v0.2.0:** apply only the new migrations `0011` and `0012` in the Supabase SQL Editor, in order. No new environment variables.
+0. **Upgrading from v0.3.0:** apply only the new migration `0013_commerce.sql` in the Supabase SQL Editor. No new environment variables.
+0. **Upgrading from v0.2.0:** apply `0011`, `0012`, `0013` in order.
 0. **Upgrading from v0.1.0:** apply `0008` to `0012` in order. Optional env: `RATE_LIMIT_USER_WRITES_PER_MIN`.
 1. **Supabase project**: create one at supabase.com. In *Authentication > Providers > Email* turn on email confirmation and set minimum password length 10. In *URL Configuration* set Site URL to your website URL and add `<site>/auth/callback` to Redirect URLs.
-2. **Database**: apply `supabase/migrations/0001..0012` in order (Supabase CLI `supabase db push`, or paste each file into the SQL Editor in order).
+2. **Database**: apply `supabase/migrations/0001..0013` in order (Supabase CLI `supabase db push`, or paste each file into the SQL Editor in order).
 3. **Environment**: see `.env.example`. API needs `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CORS_ORIGINS`. Web needs `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL`, `API_BASE_URL`.
 4. **Install and run** (on a computer or CI; see Termux notes):
    ```

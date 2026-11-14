@@ -10,6 +10,7 @@ import { requestId } from './middleware/requestId.js';
 import { addressRoutes } from './modules/addresses/routes.js';
 import { adminRoutes } from './modules/admin/routes.js';
 import { adminCatalogRoutes, publicCatalogRoutes, sellerCatalogRoutes } from './modules/catalog/routes.js';
+import { adminOrderRoutes, orderRoutes } from './modules/orders/routes.js';
 import { healthRoutes } from './modules/health/routes.js';
 import { sellerAdminRoutes } from './modules/sellers/adminRoutes.js';
 import { sellerRoutes } from './modules/sellers/routes.js';
@@ -62,6 +63,8 @@ export function createApp(deps: AppDeps, config: AppConfig): Express {
   v1.use(sellerAdminRoutes(deps, limits));
   v1.use(sellerCatalogRoutes(deps, limits));
   v1.use(adminCatalogRoutes(deps, limits));
+  v1.use(orderRoutes(deps, limits));
+  v1.use(adminOrderRoutes(deps, limits));
   app.use('/api/v1', v1);
 
   app.use(notFoundHandler);

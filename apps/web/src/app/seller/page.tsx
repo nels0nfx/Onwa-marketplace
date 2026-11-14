@@ -36,8 +36,8 @@ export default async function SellerPage({ searchParams }: { searchParams: Promi
           <span className="status-pill" data-status={store.sellerStatus}>{suspended ? 'Suspended' : 'Active'}</span>
           {!suspended ? <Link href={`/store/${store.slug}`}>View your public storefront</Link> : null}
         </div>
-        <div className="row"><ButtonLink href="/seller/products">Manage products</ButtonLink></div>
-        <p className="muted">Digital items, services, orders and earnings arrive in upcoming releases.</p>
+        <div className="row"><ButtonLink href="/seller/products">Manage products</ButtonLink><ButtonLink href="/seller/orders" variant="secondary">Orders</ButtonLink></div>
+        <p className="muted">Digital items, services and earnings arrive in upcoming releases.</p>
       </div>
       {message ? <Alert tone={message.tone}>{message.text}</Alert> : null}
       {suspended ? <Alert tone="error">Your seller account is suspended, so your storefront is hidden and you cannot edit it. Contact support if you think this is a mistake.</Alert> : null}

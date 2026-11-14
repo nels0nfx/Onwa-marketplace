@@ -14,6 +14,7 @@ Migrations in `supabase/migrations`, applied in order. Never edit an applied mig
 | 0008_addresses | `addresses` with per-user default handling and a 10-address limit; `is_ng_state()` |
 | 0009_sellers | `seller_applications`, `seller_application_documents`, `seller_application_events`, `sellers`, `stores`, `store_follows`; functions `save_seller_application`, `submit_seller_application`, `review_seller_application`, `set_seller_status`, `generate_store_slug`, `seller_application_missing` |
 | 0011_catalog | `categories` (+ starter seed), `products`, `product_variants`, `product_images`, `product_events`, immutable `inventory_movements`; functions `create_product`, `add_variant`, `seller_change_product_status`, `review_product`, `apply_stock_movement`, `seller_adjust_stock`, `product_missing`, `create_category`, `update_category`; triggers for re-review, image rules and price/stock rollups |
+| 0013_commerce | `carts`, `cart_items`, `orders`, `seller_orders`, `order_items` (immutable), `order_status_history` (immutable); functions `cart_add_item`, `cart_set_quantity`, `create_order`, `change_order_status`, `mark_order_paid` (internal), `expire_unpaid_orders` |
 | 0012_catalog_storage | Public `product-media` bucket; owner-only write policies (skipped on plain Postgres) |
 | 0010_storage | Buckets `seller-documents` (private, KYC) and `store-media` (public read, owner write) and their storage policies (skipped on plain Postgres) |
 
@@ -53,3 +54,13 @@ Sensitive data: identity documents are private files (no ID number is collected)
 - **Rollups**: `products.price_from_kobo` and `total_stock` are maintained by trigger from active variants, so the catalogue can sort and filter by price and stock.
 - **Access**: authenticated users can read only their own seller's catalogue rows (and staff with `catalog.moderate` can read all); everything public goes through the API, which only returns approved products of active sellers and never exposes exact stock or SKUs.
 - Free-form `attributes` (key/value text) are used instead of per-category attribute definitions; defining attributes per category is a later improvement.
+
+## Stage 4 notes
+
+- **Reservation, not payment**: `create_order` reserves stock through `apply_stock_movement` (reason `sale`) inside the same transaction that creates the order, items and history. A short item raises `insufficient stock` and nothing is created. `change_order_status('cancel')` and `expire_unpaid_orders()` return stock with reason `cancellation`; a cancelled order cannot be cancelled again.
+- **Idempotency**: `unique (buyer_id, idempotency_key)`. Replaying the same checkout returns the existing order and does not reserve stock twice.
+- **Snapshots**: `order_items` stores name, option label, SKU, image and the unit price actually charged, and cannot be updated or deleted. `orders.shipping_address` is a JSON copy of the chosen address, so later address edits do not change history.
+- **Money**: kobo integers, with `total = subtotal + shipping` and `line_total = unit * quantity` enforced by CHECK constraints. Shipping is 0 until Stage 8.
+- **Payment boundary**: only `mark_order_paid(order, reference)` can move an order to `paid`; it is executable by `service_role` only and has no API route. Stage 5 calls it from the verified webhook. It refuses orders that are already paid or cancelled (late payments after expiry will be handled by the Stage 5 refund flow).
+- **Visibility**: buyers read their own orders; sellers read a seller order only when `paid_at is not null`; staff with `orders.read` read all. Customer address and phone reach a seller only through the API and only for paid orders.
+- **Workflow actors** (enforced in `change_order_status`): buyer or staff cancel unpaid; seller or staff move paid orders through processing, ready, dispatched, in transit, delivered; buyer or staff confirm receipt; only the buyer can request a return, within 7 days of delivery. Staff actions are written to the audit log.
